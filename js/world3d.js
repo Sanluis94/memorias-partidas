@@ -565,14 +565,68 @@
       this.camera.fov = baseFov + panicFov;
       this.camera.updateProjectionMatrix();
 
-      // Light flicker
+      // Light flicker & Scenario Corruption
       if (this.flickerLight) {
         const flicker = 1 + Math.sin(Date.now() * 0.01) * 0.1
           + (Math.random() < 0.02 ? (Math.random() - 0.5) * 0.5 : 0);
-        this.flickerLight.intensity = this.flickerBase * flicker * (0.5 + sanity / 200);
+        this.flickerLight.intensity = this.flickerBase * flicker * (0.5 + Math.max(0, sanity) / 200);
 
-        // Sanity affects fog
-        this.scene.fog.density = 0.05 + (100 - sanity) / 800;
+        // Sanity affects fog density
+        this.scene.fog.density = 0.05 + (100 - Math.max(0, sanity)) / 800;
+
+        // Color Bleed (Crimson shift when insane)
+        if (sanity < 40) {
+            const bleed = (40 - Math.max(0, sanity)) / 40; // 0 to 1
+            const r = 0.04 + bleed * 0.2; 
+            this.scene.fog.color.setRGB(r, 0.03 - bleed*0.02, 0.04 - bleed*0.03);
+            this.lights.forEach(l => {
+                if(l.isAmbientLight) l.color.setRGB(0.04 + bleed*0.1, 0.03, 0.06);
+            });
+        } else {
+            this.scene.fog.color.setHex(0x0a0810);
+            this.lights.forEach(l => {
+                if(l.isAmbientLight) l.color.setHex(0x0a0810);
+            });
+        }
+      }
+
+      // Phantom 3D Hallucinations
+      if (sanity < 30 && Math.random() < 0.002 && !this.hallucinationActive) {
+          this.hallucinationActive = true;
+          const phrases = ["voce fez isso", "nao pode se esconder", "esta escuro", "olhe para mim", "a culpa..."];
+          const text = phrases[Math.floor(Math.random() * phrases.length)];
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = 512; canvas.height = 128;
+          const ctx = canvas.getContext('2d');
+          ctx.font = '30px "Press Start 2P"';
+          ctx.fillStyle = 'rgba(150, 20, 20, 0.8)'; // blood red
+          ctx.textAlign = 'center';
+          ctx.fillText(text, 256, 64);
+          
+          const tex = new THREE.CanvasTexture(canvas);
+          const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthTest: false });
+          const geo = new THREE.PlaneGeometry(3, 0.75);
+          const plane = new THREE.Mesh(geo, mat);
+          
+          // Spawn somewhere in front but off to the side
+          const angle = this.yaw + (Math.random() < 0.5 ? 0.8 : -0.8);
+          plane.position.set(
+              this.camera.position.x + Math.sin(angle) * 3,
+              this.playerHeight + (Math.random() - 0.5),
+              this.camera.position.z + Math.cos(angle) * 3
+          );
+          plane.lookAt(this.camera.position);
+          this.scene.add(plane);
+          
+          // Audio cue
+          try { if(window.G && G.Audio) G.Audio.sfx.whisper(); } catch(e){}
+
+          setTimeout(() => {
+              this.scene.remove(plane);
+              geo.dispose(); mat.dispose(); tex.dispose();
+              this.hallucinationActive = false;
+          }, 3000);
       }
     },
 

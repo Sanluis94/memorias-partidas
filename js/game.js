@@ -4,14 +4,45 @@
 
   /* ===== INPUT HANDLER ===== */
   const keys = {};
+  const KEY_MAP = {
+    'Enter': 'confirm', 'NumpadEnter': 'confirm', 'KeyE': 'confirm', 'Space': 'confirm',
+    'ArrowUp': 'up', 'KeyW': 'up',
+    'ArrowDown': 'down', 'KeyS': 'down',
+    'ArrowLeft': 'left', 'KeyA': 'left',
+    'ArrowRight': 'right', 'KeyD': 'right',
+    'Escape': 'escape',
+  };
+
   window.addEventListener('keydown', e => {
     keys[e.code] = true;
+    // Also map by e.key for Enter compatibility
+    if (e.key === 'Enter') keys['Enter'] = true;
+    if (e.key === ' ') keys['Space'] = true;
     // Prevent scrolling
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
       e.preventDefault();
     }
   });
-  window.addEventListener('keyup', e => { keys[e.code] = false; });
+  window.addEventListener('keyup', e => {
+    keys[e.code] = false;
+    if (e.key === 'Enter') keys['Enter'] = false;
+    if (e.key === ' ') keys['Space'] = false;
+  });
+
+  /* Canvas click handler for menus */
+  let pendingClick = null;
+  function setupCanvasClick() {
+    const canvas = document.getElementById('game-canvas');
+    canvas.addEventListener('click', e => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = 320 / rect.width;
+      const scaleY = 180 / rect.height;
+      pendingClick = {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+      };
+    });
+  }
 
   /* ===== GAME STATE ===== */
   G.state = {
@@ -38,7 +69,7 @@
     titleGlitchTimer += dt;
 
     // Title text with glitch
-    const title = 'MEMÓRIAS PARTIDAS';
+    const title = 'MEMORIAS PARTIDAS';
     ctx.font = '12px "Press Start 2P"';
 
     // Glitch offset
@@ -62,7 +93,7 @@
     // Subtitle
     ctx.font = '6px "Press Start 2P"';
     ctx.fillStyle = '#6b6b6b';
-    const sub = 'Um pesadelo quântico';
+    const sub = 'Um pesadelo quantico';
     const sw = ctx.measureText(sub).width;
     ctx.fillText(sub, (320 - sw) / 2, 70);
 
@@ -86,7 +117,25 @@
     ctx.fillStyle = '#2a2a3e';
     ctx.fillText('WASD/Setas: Mover | E/Enter: Interagir', 30, 165);
 
-    // Handle input
+    // Handle click on menu options
+    if (pendingClick) {
+      const cx = pendingClick.x, cy = pendingClick.y;
+      pendingClick = null;
+      // Check if click is in menu area
+      if (cx >= 90 && cx <= 250) {
+        if (cy >= 95 && cy <= 110) {
+          G.state.titleSelection = 0;
+          confirmTitleSelection();
+          return;
+        } else if (cy >= 111 && cy <= 126) {
+          G.state.titleSelection = 1;
+          confirmTitleSelection();
+          return;
+        }
+      }
+    }
+
+    // Handle keyboard input
     if (keys['ArrowUp'] || keys['KeyW']) {
       G.state.titleSelection = 0;
       keys['ArrowUp'] = false; keys['KeyW'] = false;
@@ -97,20 +146,26 @@
       keys['ArrowDown'] = false; keys['KeyS'] = false;
       G.Audio.sfx.menuMove();
     }
-    if (keys['Enter'] || keys['KeyE'] || keys['Space']) {
-      keys['Enter'] = false; keys['KeyE'] = false; keys['Space'] = false;
-      G.Audio.sfx.select();
-      if (G.state.titleSelection === 0) {
-        startNewGame();
-      } else {
-        loadGame();
-      }
+    if (keys['Enter'] || keys['NumpadEnter'] || keys['KeyE'] || keys['Space']) {
+      keys['Enter'] = false; keys['NumpadEnter'] = false;
+      keys['KeyE'] = false; keys['Space'] = false;
+      confirmTitleSelection();
+      return;
     }
 
     // Scanlines on title
     for (let y = 0; y < 180; y += 3) {
       ctx.fillStyle = 'rgba(0,0,0,0.15)';
       ctx.fillRect(0, y, 320, 1);
+    }
+  }
+
+  function confirmTitleSelection() {
+    G.Audio.sfx.select();
+    if (G.state.titleSelection === 0) {
+      startNewGame();
+    } else {
+      loadGame();
     }
   }
 
@@ -363,6 +418,7 @@
   /* ===== INITIALIZATION ===== */
   function init() {
     G.Renderer.init();
+    setupCanvasClick();
 
     // Show click-to-start for audio context
     const clickOverlay = document.getElementById('click-to-start');
@@ -373,6 +429,9 @@
       clickOverlay.style.display = 'none';
       document.removeEventListener('click', startAudio);
       document.removeEventListener('keydown', startAudio);
+
+      // Clear all keys to prevent stuck keys from overlay dismissal
+      Object.keys(keys).forEach(k => keys[k] = false);
 
       // Start game loop
       lastTime = performance.now();

@@ -1,5 +1,5 @@
-/* ===== RESET & BASE ===== */
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+/* ===== MEMORIAS PARTIDAS - 16-bit Horror Style ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
   background: #000;
@@ -11,17 +11,18 @@ body {
   font-family: 'Press Start 2P', monospace;
 }
 
-/* ===== GAME CONTAINER ===== */
 #game-container {
   position: relative;
-  width: 960px;
-  height: 540px;
-  border-radius: 18px;
+  width: 90vw;
+  max-width: 960px;
+  aspect-ratio: 16 / 9;
+  border: 3px solid #111;
+  border-radius: 12px;
   overflow: hidden;
   box-shadow:
-    0 0 60px rgba(45, 27, 105, 0.4),
-    0 0 120px rgba(45, 27, 105, 0.2),
-    inset 0 0 60px rgba(0,0,0,0.5);
+    0 0 30px rgba(45,27,105,0.4),
+    0 0 60px rgba(233,69,96,0.15),
+    inset 0 0 40px rgba(0,0,0,0.5);
 }
 
 #game-canvas {
@@ -32,104 +33,51 @@ body {
   image-rendering: crisp-edges;
 }
 
-/* ===== SCANLINES ===== */
 #scanlines {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  z-index: 10;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 2px,
-    rgba(0,0,0,0.15) 2px,
-    rgba(0,0,0,0.15) 4px
+    0deg,
+    rgba(0,0,0,0.08) 0px,
+    rgba(0,0,0,0.08) 1px,
+    transparent 1px,
+    transparent 3px
   );
+  pointer-events: none;
+  z-index: 2;
 }
 
-/* ===== CRT OVERLAY ===== */
-#crt-overlay {
+#vignette {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  z-index: 11;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: radial-gradient(
     ellipse at center,
-    transparent 60%,
-    rgba(0,0,0,0.6) 100%
+    transparent 55%,
+    rgba(0,0,0,0.5) 85%,
+    rgba(0,0,0,0.85) 100%
   );
+  pointer-events: none;
+  z-index: 3;
 }
 
-/* ===== GLITCH EFFECT (activated via JS) ===== */
-#game-container.glitch-active #game-canvas {
-  animation: glitch-jitter 0.1s infinite;
-}
-
-#game-container.glitch-heavy #game-canvas {
-  animation: glitch-heavy 0.05s infinite;
-}
-
-@keyframes glitch-jitter {
-  0%   { transform: translate(0, 0); }
-  20%  { transform: translate(-1px, 1px); }
-  40%  { transform: translate(1px, -1px); }
-  60%  { transform: translate(-1px, 0); }
-  80%  { transform: translate(1px, 1px); }
-  100% { transform: translate(0, 0); }
-}
-
-@keyframes glitch-heavy {
-  0%   { transform: translate(0, 0); filter: hue-rotate(0deg); }
-  10%  { transform: translate(-3px, 2px); filter: hue-rotate(90deg); }
-  20%  { transform: translate(2px, -2px); }
-  30%  { transform: translate(-1px, 3px); filter: hue-rotate(180deg); }
-  40%  { transform: translate(3px, -1px); }
-  50%  { transform: translate(-2px, 0); filter: hue-rotate(270deg); }
-  60%  { transform: translate(0, 2px); }
-  70%  { transform: translate(2px, -3px); filter: hue-rotate(45deg); }
-  80%  { transform: translate(-3px, 1px); }
-  90%  { transform: translate(1px, -2px); filter: hue-rotate(135deg); }
-  100% { transform: translate(0, 0); filter: hue-rotate(0deg); }
-}
-
-/* ===== CHROMATIC ABERRATION ===== */
-#game-container.chromatic #game-canvas {
-  text-shadow: -2px 0 red, 2px 0 cyan;
-  filter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='a'%3E%3CfeColorMatrix values='1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3C/svg%3E#a");
-}
-
-/* ===== CLICK TO START ===== */
 #click-to-start {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.95);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 100;
-  background: rgba(0,0,0,0.8);
+  z-index: 10;
   cursor: pointer;
 }
 
 #click-to-start span {
-  font-family: 'Press Start 2P', monospace;
+  color: #6b6b6b;
   font-size: 14px;
-  color: #888;
-  animation: blink 1.2s infinite;
+  animation: blink 1.5s ease-in-out infinite;
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.2; }
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 980px) {
-  #game-container {
-    width: 100vw;
-    height: 56.25vw;
-    border-radius: 0;
-  }
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }

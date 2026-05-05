@@ -1,172 +1,103 @@
-/* ===== VISUAL EFFECTS ENGINE - Glitch, Distortion, Quantum Horror ===== */
+/* ===== EFFECTS - Glitch, Shake, VHS, Chromatic Aberration ===== */
 (function() {
   'use strict';
+
+  const W = 480, H = 270;
 
   const Effects = {
     shakeX: 0,
     shakeY: 0,
     shakeTimer: 0,
-    glitchBars: [],
-    chromaticOffset: 0,
-    flickerAlpha: 0,
+    shakeIntensity: 0,
     floatOffsets: {},
-    staticNoise: null,
-    distortionLevel: 0,
-    vhsTracking: 0,
+    floatTimers: {},
 
-    update(dt, coherence) {
-      this.distortionLevel = Math.max(0, (100 - coherence) / 100);
-
+    update(dt, sanity) {
       // Screen shake
       if (this.shakeTimer > 0) {
         this.shakeTimer -= dt;
-        const intensity = this.shakeTimer * 3;
-        this.shakeX = (Math.random() - 0.5) * intensity;
-        this.shakeY = (Math.random() - 0.5) * intensity;
+        this.shakeX = (Math.random() - 0.5) * this.shakeIntensity;
+        this.shakeY = (Math.random() - 0.5) * this.shakeIntensity;
       } else {
-        // Passive shake at low coherence
-        if (coherence < 60) {
-          const s = (60 - coherence) / 60 * 1.5;
-          this.shakeX = (Math.random() - 0.5) * s;
-          this.shakeY = (Math.random() - 0.5) * s;
-        } else {
-          this.shakeX = 0;
-          this.shakeY = 0;
-        }
+        this.shakeX = 0;
+        this.shakeY = 0;
       }
 
-      // Chromatic aberration
-      this.chromaticOffset = coherence < 50 ? Math.floor((50 - coherence) / 10) : 0;
-
-      // Random glitch bars
-      if (coherence < 70 && Math.random() < (70 - coherence) / 500) {
-        this.glitchBars.push({
-          y: Math.random() * 180,
-          h: 1 + Math.random() * 4,
-          offset: (Math.random() - 0.5) * 10,
-          life: 0.05 + Math.random() * 0.1,
-        });
-      }
-      this.glitchBars = this.glitchBars.filter(b => { b.life -= dt; return b.life > 0; });
-
-      // Flicker
-      if (coherence < 40 && Math.random() < 0.02) {
-        this.flickerAlpha = 0.3 + Math.random() * 0.4;
-      } else {
-        this.flickerAlpha *= 0.9;
+      // Floating objects
+      for (const key in this.floatTimers) {
+        this.floatTimers[key] += dt * (1 + Math.random() * 0.5);
+        this.floatOffsets[key] = Math.sin(this.floatTimers[key] * 2) * 4;
       }
 
-      // Float offsets for objects
-      const t = performance.now() / 1000;
-      for (const key in this.floatOffsets) {
-        this.floatOffsets[key] = Math.sin(t * 0.8 + parseInt(key) * 1.7) * 3 * this.distortionLevel;
-      }
-
-      // VHS tracking
-      if (coherence < 30) {
-        this.vhsTracking = Math.sin(t * 2) * (30 - coherence) / 10;
-      } else {
-        this.vhsTracking = 0;
-      }
-
-      // CSS class management
-      const container = document.getElementById('game-container');
-      if (container) {
-        container.classList.toggle('glitch-active', coherence < 60 && coherence >= 30);
-        container.classList.toggle('glitch-heavy', coherence < 30);
-        container.classList.toggle('chromatic', coherence < 50);
+      // Random shake at low sanity
+      if (sanity < 30 && Math.random() < 0.01) {
+        this.triggerShake(0.15 + Math.random() * 0.2);
       }
     },
 
-    triggerShake(duration) {
-      this.shakeTimer = duration || 0.5;
+    triggerShake(duration, intensity) {
+      this.shakeTimer = duration || 0.3;
+      this.shakeIntensity = intensity || 5;
     },
 
-    addFloatObject(id) {
-      this.floatOffsets[id] = 0;
+    addFloatObject(key) {
+      this.floatTimers[key] = Math.random() * Math.PI * 2;
+      this.floatOffsets[key] = 0;
     },
 
-    /* Draw post-processing effects on the canvas */
-    render(ctx, coherence) {
-      // Glitch bars
-      for (const bar of this.glitchBars) {
-        const imgData = ctx.getImageData(0, Math.floor(bar.y), 320, Math.ceil(bar.h));
-        ctx.putImageData(imgData, Math.floor(bar.offset), Math.floor(bar.y));
-      }
-
-      // Chromatic aberration
-      if (this.chromaticOffset > 0) {
-        const imgData = ctx.getImageData(0, 0, 320, 180);
-        const copy = ctx.createImageData(320, 180);
-        const src = imgData.data;
-        const dst = copy.data;
-        const off = this.chromaticOffset;
-
-        for (let y = 0; y < 180; y++) {
-          for (let x = 0; x < 320; x++) {
-            const i = (y * 320 + x) * 4;
-            // Red channel shifted left
-            const rx = Math.max(0, Math.min(319, x - off));
-            const ri = (y * 320 + rx) * 4;
-            dst[i] = src[ri];
-            // Green stays
-            dst[i + 1] = src[i + 1];
-            // Blue channel shifted right
-            const bx = Math.max(0, Math.min(319, x + off));
-            const bi = (y * 320 + bx) * 4;
-            dst[i + 2] = src[bi + 2];
-            dst[i + 3] = src[i + 3];
-          }
-        }
-        ctx.putImageData(copy, 0, 0);
-      }
-
-      // Static noise overlay
-      if (coherence < 50) {
-        const intensity = (50 - coherence) / 50 * 0.15;
-        const imgData = ctx.getImageData(0, 0, 320, 180);
-        const d = imgData.data;
-        for (let i = 0; i < d.length; i += 4) {
-          if (Math.random() < intensity) {
-            const n = Math.random() * 255;
-            d[i] = d[i + 1] = d[i + 2] = n;
-          }
-        }
-        ctx.putImageData(imgData, 0, 0);
-      }
-
-      // Screen flicker
-      if (this.flickerAlpha > 0.01) {
-        ctx.fillStyle = `rgba(255,255,255,${this.flickerAlpha})`;
-        ctx.fillRect(0, 0, 320, 180);
-      }
-
+    render(ctx, sanity) {
       // VHS tracking lines
-      if (Math.abs(this.vhsTracking) > 0.5) {
-        const ty = 90 + this.vhsTracking * 5;
-        ctx.fillStyle = 'rgba(255,255,255,0.1)';
-        ctx.fillRect(0, ty, 320, 2);
-        ctx.fillRect(0, ty + 20, 320, 1);
+      if (sanity < 70 && Math.random() < 0.03 * (1 - sanity/100)) {
+        const y = Math.random() * H;
+        ctx.fillStyle = `rgba(255,255,255,${0.02 + Math.random() * 0.03})`;
+        ctx.fillRect(0, y, W, 1 + Math.random() * 2);
       }
 
-      // Color inversion at very low coherence
-      if (coherence < 15 && Math.random() < 0.05) {
-        const imgData = ctx.getImageData(0, 0, 320, 180);
-        const d = imgData.data;
-        for (let i = 0; i < d.length; i += 4) {
-          d[i] = 255 - d[i];
-          d[i+1] = 255 - d[i+1];
-          d[i+2] = 255 - d[i+2];
+      // Chromatic aberration at low sanity
+      if (sanity < 50) {
+        const strength = (50 - sanity) / 50;
+        const offset = Math.floor(strength * 3);
+        if (offset > 0) {
+          const imageData = ctx.getImageData(0, 0, W, H);
+          const data = imageData.data;
+          const copy = new Uint8ClampedArray(data);
+
+          for (let i = 0; i < data.length; i += 4) {
+            const pixel = Math.floor(i / 4);
+            const px = pixel % W;
+            if (px + offset < W) {
+              data[i] = copy[i + offset * 4]; // Red shift right
+            }
+            if (px - offset >= 0) {
+              data[i + 2] = copy[i - offset * 4 + 2]; // Blue shift left
+            }
+          }
+          ctx.putImageData(imageData, 0, 0);
         }
-        ctx.putImageData(imgData, 0, 0);
+      }
+
+      // Screen tear / glitch blocks
+      if (sanity < 40 && Math.random() < 0.02) {
+        const gy = Math.floor(Math.random() * H);
+        const gh = 2 + Math.floor(Math.random() * 8);
+        const gx = Math.floor(Math.random() * 20) - 10;
+        const imgSlice = ctx.getImageData(0, gy, W, gh);
+        ctx.putImageData(imgSlice, gx, gy);
+      }
+
+      // Color noise at very low sanity
+      if (sanity < 25) {
+        for (let i = 0; i < 5; i++) {
+          ctx.fillStyle = `rgba(${Math.random()*80},${Math.random()*20},${Math.random()*80},${Math.random()*0.1})`;
+          ctx.fillRect(
+            Math.random() * W,
+            Math.random() * H,
+            Math.random() * 60 + 10,
+            1 + Math.random() * 3
+          );
+        }
       }
     },
-
-    /* Full-screen flash effect */
-    flash(ctx, color, alpha) {
-      ctx.fillStyle = color || 'rgba(255,255,255,' + (alpha || 0.8) + ')';
-      ctx.fillRect(0, 0, 320, 180);
-    }
   };
 
   window.G = window.G || {};

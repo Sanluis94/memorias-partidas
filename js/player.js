@@ -1,198 +1,105 @@
-/* ===== PLAYER - Movement, Animation, Interaction ===== */
+/* ===== PLAYER - 16-bit character ===== */
 (function() {
   'use strict';
 
-  const TILE = 16;
-  const SPEED = 60; // pixels per second
+  const TILE = 24;
+  const SPEED = 72; // pixels per second
+  const PW = 16, PH = 22; // hitbox
+  const OFFSET_X = 4, OFFSET_Y = 2; // hitbox offset in sprite
 
   const Player = {
-    x: 5 * TILE, y: 5 * TILE,
+    x: 0, y: 0,
     dir: 'down',
     frame: 0,
     animTimer: 0,
     moving: false,
-    stepTimer: 0,
     interactCooldown: 0,
 
-    /* Sprite data: 16x16 per direction, 2 frames each */
+    // 16-bit style sprite data (24x24, using color indices)
+    // Colors: 0=transparent, 1=#1a1a2e dark, 2=#2d1b69 purple, 3=#d4a574 skin,
+    //         4=#6b4e3d brown, 5=#f0e6d3 white, 6=#3a3a5a shirt, 7=#e94560 detail
     sprites: {
       down: [
-        // Frame 0
-        [
-          '......4444......',
-          '.....488884.....',
-          '.....488884.....',
-          '.....8f88f8.....',
-          '.....888888.....',
-          '.....88ff88.....',
-          '......8888......',
-          '.....bbbbbb.....',
-          '....bbb44bbb....',
-          '....bb4444bb....',
-          '....bb4444bb....',
-          '.....bbbbbb.....',
-          '.....bb..bb.....',
-          '.....bb..bb.....',
-          '.....11..11.....',
-          '................',
+        [ // frame 0
+          [0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,4,4,1,1,1,1,1,1,4,4,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,4,4,1,1,1,1,1,1,1,1,4,4,0,0,0,0,0,0],
+          [0,0,0,0,0,0,4,3,3,3,3,3,3,3,3,3,3,4,0,0,0,0,0,0],
+          [0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0],
+          [0,0,0,0,0,0,3,3,5,5,3,3,3,3,5,5,3,3,0,0,0,0,0,0],
+          [0,0,0,0,0,0,3,3,1,5,3,3,3,3,1,5,3,3,0,0,0,0,0,0],
+          [0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0],
+          [0,0,0,0,0,0,3,3,3,3,1,1,1,1,3,3,3,3,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,0,0],
+          [0,0,0,0,0,0,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,0,0],
+          [0,0,0,0,0,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,0],
+          [0,0,0,0,0,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,0],
+          [0,0,0,0,0,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,0],
+          [0,0,0,0,0,3,6,6,6,6,6,6,6,6,6,6,6,6,3,0,0,0,0,0],
+          [0,0,0,0,0,3,3,6,6,6,6,6,6,6,6,6,6,3,3,0,0,0,0,0],
+          [0,0,0,0,0,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,4,4,4,4,4,0,0,4,4,4,4,4,0,0,0,0,0,0],
+          [0,0,0,0,0,0,4,4,4,4,4,0,0,4,4,4,4,4,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         ],
-        // Frame 1
-        [
-          '......4444......',
-          '.....488884.....',
-          '.....488884.....',
-          '.....8f88f8.....',
-          '.....888888.....',
-          '.....88ff88.....',
-          '......8888......',
-          '.....bbbbbb.....',
-          '....bbb44bbb....',
-          '....bb4444bb....',
-          '....bb4444bb....',
-          '.....bbbbbb.....',
-          '....bb....bb....',
-          '....11....11....',
-          '................',
-          '................',
-        ],
-      ],
-      up: [
-        [
-          '......4444......',
-          '.....444444.....',
-          '.....444444.....',
-          '.....444444.....',
-          '.....444444.....',
-          '.....444444.....',
-          '......4444......',
-          '.....bbbbbb.....',
-          '....bbb44bbb....',
-          '....bb4444bb....',
-          '....bb4444bb....',
-          '.....bbbbbb.....',
-          '.....bb..bb.....',
-          '.....bb..bb.....',
-          '.....11..11.....',
-          '................',
-        ],
-        [
-          '......4444......',
-          '.....444444.....',
-          '.....444444.....',
-          '.....444444.....',
-          '.....444444.....',
-          '.....444444.....',
-          '......4444......',
-          '.....bbbbbb.....',
-          '....bbb44bbb....',
-          '....bb4444bb....',
-          '....bb4444bb....',
-          '.....bbbbbb.....',
-          '....bb....bb....',
-          '....11....11....',
-          '................',
-          '................',
-        ],
-      ],
-      left: [
-        [
-          '......4444......',
-          '.....488884.....',
-          '....4888884.....',
-          '....f888884.....',
-          '....8888884.....',
-          '....8ff8884.....',
-          '.....88884......',
-          '....bbbbbb......',
-          '...bbb44bbb.....',
-          '...bb4444bb.....',
-          '...bb4444bb.....',
-          '....bbbbbb......',
-          '....bb..bb......',
-          '....bb..bb......',
-          '....11..11......',
-          '................',
-        ],
-        [
-          '......4444......',
-          '.....488884.....',
-          '....4888884.....',
-          '....f888884.....',
-          '....8888884.....',
-          '....8ff8884.....',
-          '.....88884......',
-          '....bbbbbb......',
-          '...bbb44bbb.....',
-          '...bb4444bb.....',
-          '...bb4444bb.....',
-          '....bbbbbb......',
-          '...bb....bb.....',
-          '...11....11.....',
-          '................',
-          '................',
-        ],
-      ],
-      right: [
-        [
-          '......4444......',
-          '.....488884.....',
-          '.....4888884....',
-          '.....488888f....',
-          '.....4888888....',
-          '.....488ff88....',
-          '......48888.....',
-          '......bbbbbb....',
-          '.....bbb44bbb...',
-          '.....bb4444bb...',
-          '.....bb4444bb...',
-          '......bbbbbb....',
-          '......bb..bb....',
-          '......bb..bb....',
-          '......11..11....',
-          '................',
-        ],
-        [
-          '......4444......',
-          '.....488884.....',
-          '.....4888884....',
-          '.....488888f....',
-          '.....4888888....',
-          '.....488ff88....',
-          '......48888.....',
-          '......bbbbbb....',
-          '.....bbb44bbb...',
-          '.....bb4444bb...',
-          '.....bb4444bb...',
-          '......bbbbbb....',
-          '.....bb....bb...',
-          '.....11....11...',
-          '................',
-          '................',
+        [ // frame 1 - walk
+          [0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,4,4,1,1,1,1,1,1,4,4,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,4,4,1,1,1,1,1,1,1,1,4,4,0,0,0,0,0,0],
+          [0,0,0,0,0,0,4,3,3,3,3,3,3,3,3,3,3,4,0,0,0,0,0,0],
+          [0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0],
+          [0,0,0,0,0,0,3,3,5,5,3,3,3,3,5,5,3,3,0,0,0,0,0,0],
+          [0,0,0,0,0,0,3,3,1,5,3,3,3,3,1,5,3,3,0,0,0,0,0,0],
+          [0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0],
+          [0,0,0,0,0,0,3,3,3,3,1,1,1,1,3,3,3,3,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,0,0],
+          [0,0,0,0,0,0,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,0,0],
+          [0,0,0,0,0,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,0],
+          [0,0,0,0,0,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,0],
+          [0,0,0,0,0,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,0],
+          [0,0,0,0,0,3,6,6,6,6,6,6,6,6,6,6,6,6,3,0,0,0,0,0],
+          [0,0,0,0,0,3,3,6,6,6,6,6,6,6,6,6,6,3,3,0,0,0,0,0],
+          [0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+          [0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+          [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0],
+          [0,0,0,0,4,4,4,4,0,0,0,0,0,0,0,0,4,4,4,4,0,0,0,0],
+          [0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0],
+          [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+          [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         ],
       ],
     },
 
-    /* Color map for sprite chars */
     colorMap: {
-      '.': null,
-      '1': '#1a1a2e',
-      '4': '#2d1b69',
-      '8': '#d4a574',
-      'f': '#f0e6d3',
-      'b': '#3a3a5a',
+      0: null,
+      1: '#1a1a2e',
+      2: '#2d1b69',
+      3: '#d4a574',
+      4: '#6b4e3d',
+      5: '#f0e6d3',
+      6: '#3a4a5e',
+      7: '#e94560',
     },
 
-    init(startX, startY) {
-      this.x = startX * TILE;
-      this.y = startY * TILE;
+    init(tileX, tileY) {
+      this.x = tileX * TILE;
+      this.y = tileY * TILE;
       this.dir = 'down';
       this.frame = 0;
+      this.animTimer = 0;
+      this.moving = false;
+      this.interactCooldown = 0;
     },
 
-    update(dt, keys, roomData) {
-      this.interactCooldown = Math.max(0, this.interactCooldown - dt);
-      let dx = 0, dy = 0;
+    update(dt, keys, map) {
+      if (this.interactCooldown > 0) this.interactCooldown -= dt;
 
+      let dx = 0, dy = 0;
       if (keys['ArrowLeft'] || keys['KeyA']) { dx = -1; this.dir = 'left'; }
       if (keys['ArrowRight'] || keys['KeyD']) { dx = 1; this.dir = 'right'; }
       if (keys['ArrowUp'] || keys['KeyW']) { dy = -1; this.dir = 'up'; }
@@ -201,22 +108,24 @@
       this.moving = dx !== 0 || dy !== 0;
 
       if (this.moving) {
+        // Normalize diagonal
+        if (dx !== 0 && dy !== 0) {
+          dx *= 0.707; dy *= 0.707;
+        }
+
         const newX = this.x + dx * SPEED * dt;
         const newY = this.y + dy * SPEED * dt;
 
         // Collision check
-        const checkX = dx > 0 ? newX + 12 : newX + 3;
-        const checkY = dy > 0 ? newY + 14 : newY + 6;
-        const tileX = Math.floor(checkX / TILE);
-        const tileY = Math.floor(checkY / TILE);
+        if (map) {
+          const canMoveX = this._canMove(newX, this.y, map);
+          const canMoveY = this._canMove(this.x, newY, map);
 
-        if (roomData && tileY >= 0 && tileY < roomData.length && tileX >= 0 && tileX < roomData[tileY].length) {
-          const tile = roomData[tileY][tileX];
-          const solid = '#BTSCHIMULORAKEVFXNG'.includes(tile);
-          if (!solid) {
-            this.x = newX;
-            this.y = newY;
-          }
+          if (canMoveX) this.x = newX;
+          if (canMoveY) this.y = newY;
+        } else {
+          this.x = newX;
+          this.y = newY;
         }
 
         // Animation
@@ -225,33 +134,83 @@
           this.animTimer = 0;
           this.frame = (this.frame + 1) % 2;
         }
-
-        // Footstep sound
-        this.stepTimer += dt;
-        if (this.stepTimer > 0.35) {
-          this.stepTimer = 0;
-          G.Audio.sfx.footstep();
-        }
       } else {
         this.frame = 0;
         this.animTimer = 0;
       }
-
-      // Keep in bounds
-      this.x = Math.max(0, Math.min(320 - TILE, this.x));
-      this.y = Math.max(0, Math.min(180 - TILE, this.y));
     },
 
-    /* Get tile in front of player */
-    getFacingTile() {
-      const cx = Math.floor((this.x + 8) / TILE);
-      const cy = Math.floor((this.y + 10) / TILE);
-      switch(this.dir) {
-        case 'up': return { x: cx, y: cy - 1 };
-        case 'down': return { x: cx, y: cy + 1 };
-        case 'left': return { x: cx - 1, y: cy };
-        case 'right': return { x: cx + 1, y: cy };
+    _canMove(nx, ny, map) {
+      const hitX = nx + OFFSET_X;
+      const hitY = ny + OFFSET_Y;
+      const corners = [
+        { x: hitX + 2, y: hitY + 6 },
+        { x: hitX + PW - 2, y: hitY + 6 },
+        { x: hitX + 2, y: hitY + PH },
+        { x: hitX + PW - 2, y: hitY + PH },
+      ];
+      const walls = '#';
+      for (const c of corners) {
+        const tx = Math.floor(c.x / TILE);
+        const ty = Math.floor(c.y / TILE);
+        if (ty < 0 || ty >= map.length || tx < 0 || tx >= map[0].length) return false;
+        if (walls.includes(map[ty][tx])) return false;
       }
+      return true;
+    },
+
+    render(ctx, sanity) {
+      const spriteData = this.sprites.down[this.frame];
+      if (!spriteData) return;
+
+      const px = Math.floor(this.x);
+      const py = Math.floor(this.y);
+
+      for (let sy = 0; sy < spriteData.length; sy++) {
+        for (let sx = 0; sx < spriteData[sy].length; sx++) {
+          const ci = spriteData[sy][sx];
+          if (ci === 0) continue;
+          const color = this.colorMap[ci];
+          if (!color) continue;
+          ctx.fillStyle = color;
+          ctx.fillRect(px + sx, py + sy, 1, 1);
+        }
+      }
+
+      // Ghost echo at low sanity
+      if (sanity < 50) {
+        const ghostAlpha = (50 - sanity) / 100;
+        ctx.globalAlpha = ghostAlpha * 0.3;
+        const gx = px + Math.sin(Date.now() * 0.003) * 4;
+        const gy = py + Math.cos(Date.now() * 0.004) * 2;
+        for (let sy = 0; sy < spriteData.length; sy++) {
+          for (let sx = 0; sx < spriteData[sy].length; sx++) {
+            const ci = spriteData[sy][sx];
+            if (ci === 0) continue;
+            ctx.fillStyle = '#6030a0';
+            ctx.fillRect(gx + sx, gy + sy, 1, 1);
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+    },
+
+    getTilePos() {
+      return {
+        x: Math.floor((this.x + 12) / TILE),
+        y: Math.floor((this.y + 12) / TILE),
+      };
+    },
+
+    getFacingTile() {
+      const pos = this.getTilePos();
+      switch(this.dir) {
+        case 'up': return { x: pos.x, y: pos.y - 1 };
+        case 'down': return { x: pos.x, y: pos.y + 1 };
+        case 'left': return { x: pos.x - 1, y: pos.y };
+        case 'right': return { x: pos.x + 1, y: pos.y };
+      }
+      return pos;
     },
 
     canInteract() {
@@ -261,49 +220,6 @@
     doInteract() {
       this.interactCooldown = 0.3;
     },
-
-    render(ctx, coherence) {
-      const spriteData = this.sprites[this.dir][this.frame];
-      const px = Math.floor(this.x);
-      const py = Math.floor(this.y);
-
-      for (let sy = 0; sy < 16; sy++) {
-        for (let sx = 0; sx < 16; sx++) {
-          const ch = spriteData[sy][sx];
-          const color = this.colorMap[ch];
-          if (color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(px + sx, py + sy, 1, 1);
-          }
-        }
-      }
-
-      // Ghost double at low coherence
-      if (coherence < 40 && Math.random() < 0.1) {
-        const ox = (Math.random() - 0.5) * 8;
-        const oy = (Math.random() - 0.5) * 8;
-        ctx.globalAlpha = 0.15;
-        for (let sy = 0; sy < 16; sy++) {
-          for (let sx = 0; sx < 16; sx++) {
-            const ch = spriteData[sy][sx];
-            const color = this.colorMap[ch];
-            if (color) {
-              ctx.fillStyle = '#4a1942';
-              ctx.fillRect(px + sx + ox, py + sy + oy, 1, 1);
-            }
-          }
-        }
-        ctx.globalAlpha = 1;
-      }
-    },
-
-    /* Get current tile position */
-    getTilePos() {
-      return {
-        x: Math.floor((this.x + 8) / TILE),
-        y: Math.floor((this.y + 10) / TILE),
-      };
-    }
   };
 
   window.G = window.G || {};

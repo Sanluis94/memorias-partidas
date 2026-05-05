@@ -6,8 +6,8 @@
     currentRoom: null,
     currentRoomId: '',
     chapter: 1,
-    fadeAlpha: 1,
-    fadeDir: 0, // -1 fading in, 1 fading out, 0 none
+    fadeAlpha: 0,
+    fadeDir: 0,
     fadeCallback: null,
     pendingTransition: null,
     interactionCounts: {},
@@ -16,18 +16,16 @@
     eventTimer: 0,
     chapterTitleTimer: 0,
     chapterTitleText: '',
-    floatingObjects: [],
     pillColor: '#e94560',
 
     init() {
       this.chapter = 1;
       this.eventTimer = 0;
-      this.chapterTitleTimer = 5;
-      this.endingTriggered = false;
+      this.chapterTitleTimer = 4;
       this.fadeAlpha = 0;
       this.fadeDir = 0;
+      this.interactionCounts = {};
       this.loadChapter(1);
-      this.loadRoom('bedroom', 9, 5);
     },
 
     loadChapter(num) {
@@ -37,16 +35,12 @@
 
       this.chapterEvents = ch.events.slice();
       this.eventIndex = 0;
-      this.chapterTitleText = 'Capítulo ' + num + ': ' + ch.name;
-      this.chapterTitleTimer = 3.5;
-
-      // Set pill color
+      this.eventTimer = 0;
+      this.chapterTitleText = 'Capitulo ' + num + ': ' + ch.name;
+      this.chapterTitleTimer = 4;
       this.pillColor = G.Story.getRandomPillColor();
-
-      // Load start room
       this.loadRoom(ch.startRoom);
 
-      // Setup floating objects for ch2+
       if (num >= 2) {
         this._setupFloatingObjects();
       }
@@ -63,10 +57,8 @@
         G.Player.init(spawnX, spawnY);
       }
 
-      // Clear floating objects for new room
       G.Effects.floatOffsets = {};
 
-      // Add floating objects in ch2+
       if (this.chapter >= 2) {
         this._setupFloatingObjects();
       }
@@ -96,14 +88,13 @@
       // Chapter title display
       if (this.chapterTitleTimer > 0) {
         this.chapterTitleTimer -= dt;
-        return; // Pause gameplay during title
+        return;
       }
 
       // Fade transitions
       if (this.fadeDir !== 0) {
         this.fadeAlpha += this.fadeDir * dt * 3;
         if (this.fadeAlpha >= 1 && this.fadeDir === 1) {
-          // At full black, do the transition
           if (this.pendingTransition) {
             this.loadRoom(
               this.pendingTransition.roomId,
@@ -121,10 +112,10 @@
         return;
       }
 
-      // Chapter events (timed)
+      // Chapter events
       if (this.chapterEvents.length > 0) {
         this.eventTimer += dt;
-        if (this.eventTimer > 8 + Math.random() * 15) {
+        if (this.eventTimer > 6 + Math.random() * 10) {
           this.eventTimer = 0;
           const event = this.chapterEvents.shift();
           if (G.Story.dialogues[event] && !G.Dialogue.active) {
@@ -141,10 +132,10 @@
         this._handleInteraction(facing, keys);
       }
 
-      // Handle door collision
+      // Door collision
       this._checkDoors();
 
-      // Random events based on chapter
+      // Random events
       this._randomEvents(dt);
     },
 
@@ -154,7 +145,7 @@
       if (facing.y < 0 || facing.y >= map.length || facing.x < 0 || facing.x >= map[facing.y].length) return;
 
       const tile = map[facing.y][facing.x];
-      if (tile === '.' || tile === '#') return;
+      if (tile === '.' || tile === '#' || tile === 'Z') return;
 
       G.Player.doInteract();
       keys['Enter'] = false;
@@ -164,7 +155,6 @@
       this.interactionCounts[key] = (this.interactionCounts[key] || 0) + 1;
       const count = this.interactionCounts[key];
 
-      // Map tile to dialogue
       const dialogueMap = {
         'B': ['bed_interact'],
         'I': ['nightstand_interact'],
@@ -180,16 +170,16 @@
         'O': ['stove_interact'],
         'T': this.currentRoomId === 'kitchen' ? ['kitchen_table_interact'] : ['lab_equipment_interact'],
         'N': this.currentRoomId === 'kitchen' ? ['note1_interact'] : (count <= 1 ? ['lab_note_1'] : ['lab_note_2']),
-        'L': [{ text: 'Um vaso sanitário. Nada de interessante.', isThought: true }],
-        'U': [{ text: 'A banheira está vazia. Fria.', isThought: true }],
+        'L': [{ text: 'Um vaso sanitario. Nada de interessante.', isThought: true }],
+        'U': [{ text: 'A banheira esta vazia. Fria.', isThought: true }],
         'K': [{ text: 'A torneira pinga. Constantemente.', isThought: true }],
         'X': ['lab_equipment_interact'],
+        'Q': ['lab_equipment_interact'],
       };
 
       const dialogueKey = dialogueMap[tile];
       if (!dialogueKey) return;
 
-      // If it's a string key, look up in story
       const dialogues = typeof dialogueKey[0] === 'string'
         ? G.Story.dialogues[dialogueKey[0]]
         : dialogueKey;
@@ -198,17 +188,11 @@
         G.Audio.sfx.interact();
         G.Dialogue.showSequence(JSON.parse(JSON.stringify(dialogues)));
 
-        // Special effects on interactions
         if (tile === 'M' && count >= 2) G.Sanity.change(-8, 'mirror');
         if (tile === 'F' && count >= 2) G.Sanity.change(-5, 'photo_change');
         if (tile === 'V') G.Sanity.change(-3, 'tv');
+        if (tile === 'P') this.pillColor = G.Story.getRandomPillColor();
 
-        // Pill color change
-        if (tile === 'P') {
-          this.pillColor = G.Story.getRandomPillColor();
-        }
-
-        // Lab notes mark flags
         if (tile === 'N' && this.currentRoomId === 'laboratory') {
           G.state.flags.foundLabNote = true;
           G.state.flags.notesFound = (G.state.flags.notesFound || 0) + 1;
@@ -227,35 +211,36 @@
       const tile = map[pos.y][pos.x];
 
       if (tile === 'D') {
-        // Find which door this is
-        const doorKey = 'D_' + pos.x;
-        const door = this.currentRoom.doors[doorKey];
+        // Try to find the matching door
+        let door = null;
+        const isTopRow = pos.y <= 1;
+        const isBottomRow = pos.y >= map.length - 2;
 
-        // Also try y-based key
-        const doorKey2 = 'D_' + pos.y;
+        // Try keys in order: specific key with direction, then simple key
+        const tryKeys = [
+          'D_' + pos.x + (isTopRow ? '_top' : '_bot'),
+          'D_' + pos.x,
+          'D_' + pos.y,
+        ];
 
-        const foundDoor = door || this.currentRoom.doors[doorKey2];
+        for (const k of tryKeys) {
+          if (this.currentRoom.doors[k]) {
+            door = this.currentRoom.doors[k];
+            break;
+          }
+        }
 
-        if (foundDoor) {
-          // Chapter-gate certain rooms
-          const targetRoom = foundDoor.target;
+        if (door) {
+          const targetRoom = door.target;
           const ch = G.Story.chapters[this.chapter];
           if (ch && !ch.availableRooms.includes(targetRoom)) {
             if (!G.Dialogue.active) {
-              G.Dialogue.show('Essa porta não abre.', { isThought: true });
+              G.Dialogue.show('Essa porta nao abre.', { isThought: true });
             }
             return;
           }
 
-          // Special transitions for memory rooms
-          if (targetRoom.startsWith('memory_')) {
-            G.Audio.sfx.glitch();
-            G.Effects.triggerShake(0.5);
-          }
-
-          this.transition(foundDoor.target, foundDoor.spawnX, foundDoor.spawnY);
-
-          // Check chapter progression
+          this.transition(door.target, door.spawnX, door.spawnY);
           this._checkChapterProgress();
         }
       }
@@ -310,18 +295,12 @@
 
     _randomEvents(dt) {
       if (this.chapter < 2 || G.Dialogue.active) return;
-
-      // Random sound
       if (Math.random() < 0.001 * this.chapter) {
         G.Audio.playStatic(0.1 + Math.random() * 0.2, 0.04);
       }
-
-      // Random whisper at low coherence
       if (G.Sanity.value < 40 && Math.random() < 0.002) {
         G.Audio.sfx.whisper();
       }
-
-      // Memory fragments in ch3
       if (this.chapter === 3 && Math.random() < 0.0005 && !G.Dialogue.active) {
         const fragments = ['memory_wife_death_1', 'memory_daughter'];
         const frag = fragments[Math.floor(Math.random() * fragments.length)];
@@ -337,25 +316,22 @@
     render(ctx) {
       if (!this.currentRoom) return;
 
-      // Draw room
       G.Renderer.drawRoom(this.currentRoom.map, this.pillColor);
-
-      // Draw player
       G.Player.render(ctx, G.Sanity.value);
 
       // Darkness overlay
-      const px = G.Player.x + 8;
-      const py = G.Player.y + 8;
-      const radius = this.currentRoom.darkRadius || 80;
+      const px = G.Player.x + 12;
+      const py = G.Player.y + 12;
+      const radius = this.currentRoom.darkRadius || 130;
       const adjustedRadius = radius * (0.7 + (G.Sanity.value / 100) * 0.3);
       G.Renderer.drawDarkness(px, py, adjustedRadius);
 
       // Coherence bar
       G.Renderer.drawCoherenceBar(G.Sanity.value);
 
-      // Room name (subtle)
+      // Room name
       if (this.currentRoom.name) {
-        G.Renderer.drawText(this.currentRoom.name, 4, 10, 'rgba(100,100,120,0.5)', 6);
+        G.Renderer.drawText(this.currentRoom.name, 6, 14, 'rgba(120,120,140,0.5)', 6);
       }
 
       // Fade
@@ -367,10 +343,10 @@
       if (this.chapterTitleTimer > 0) {
         G.Renderer.drawFade(Math.min(1, this.chapterTitleTimer / 0.5));
         const alpha = Math.min(1, this.chapterTitleTimer);
-        ctx.font = '10px "Press Start 2P"';
+        ctx.font = '14px "Press Start 2P"';
         ctx.fillStyle = `rgba(200,168,96,${alpha})`;
         const tw = ctx.measureText(this.chapterTitleText).width;
-        ctx.fillText(this.chapterTitleText, (320 - tw) / 2, 85);
+        ctx.fillText(this.chapterTitleText, (480 - tw) / 2, 130);
       }
     },
   };

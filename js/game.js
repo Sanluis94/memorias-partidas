@@ -2,23 +2,14 @@
 (function() {
   'use strict';
 
+  const W = 480, H = 270;
+
   /* ===== INPUT HANDLER ===== */
   const keys = {};
-  const KEY_MAP = {
-    'Enter': 'confirm', 'NumpadEnter': 'confirm', 'KeyE': 'confirm', 'Space': 'confirm',
-    'ArrowUp': 'up', 'KeyW': 'up',
-    'ArrowDown': 'down', 'KeyS': 'down',
-    'ArrowLeft': 'left', 'KeyA': 'left',
-    'ArrowRight': 'right', 'KeyD': 'right',
-    'Escape': 'escape',
-  };
-
   window.addEventListener('keydown', e => {
     keys[e.code] = true;
-    // Also map by e.key for Enter compatibility
     if (e.key === 'Enter') keys['Enter'] = true;
     if (e.key === ' ') keys['Space'] = true;
-    // Prevent scrolling
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
       e.preventDefault();
     }
@@ -29,50 +20,43 @@
     if (e.key === ' ') keys['Space'] = false;
   });
 
-  /* Canvas click handler for menus */
+  /* Canvas click handler */
   let pendingClick = null;
   function setupCanvasClick() {
     const canvas = document.getElementById('game-canvas');
     canvas.addEventListener('click', e => {
       const rect = canvas.getBoundingClientRect();
-      const scaleX = 320 / rect.width;
-      const scaleY = 180 / rect.height;
       pendingClick = {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY,
+        x: (e.clientX - rect.left) * (W / rect.width),
+        y: (e.clientY - rect.top) * (H / rect.height),
       };
     });
   }
 
   /* ===== GAME STATE ===== */
   G.state = {
-    mode: 'title', // title, playing, ending, credits
+    mode: 'title',
     flags: {},
     ending: null,
     endingTimer: 0,
     titleSelection: 0,
-    started: false,
   };
 
   let lastTime = 0;
   let titleFlicker = 0;
   let titleGlitchTimer = 0;
-  let creditsTimer = 0;
-  let endingPhase = 0;
 
   /* ===== TITLE SCREEN ===== */
   function renderTitle(ctx, dt) {
-    ctx.fillStyle = '#0a0a0f';
-    ctx.fillRect(0, 0, 320, 180);
+    ctx.fillStyle = '#08080c';
+    ctx.fillRect(0, 0, W, H);
 
     titleFlicker += dt;
     titleGlitchTimer += dt;
 
-    // Title text with glitch
     const title = 'MEMORIAS PARTIDAS';
-    ctx.font = '12px "Press Start 2P"';
+    ctx.font = '16px "Press Start 2P"';
 
-    // Glitch offset
     let ox = 0, oy = 0;
     if (titleGlitchTimer > 3 && titleGlitchTimer < 3.15) {
       ox = (Math.random() - 0.5) * 6;
@@ -83,59 +67,50 @@
     // Shadow layers
     ctx.fillStyle = '#4a1942';
     const tw = ctx.measureText(title).width;
-    const tx = (320 - tw) / 2;
-    ctx.fillText(title, tx + 2 + ox, 52 + oy);
+    const tx = (W - tw) / 2;
+    ctx.fillText(title, tx + 2 + ox, 82 + oy);
     ctx.fillStyle = '#2d1b69';
-    ctx.fillText(title, tx + 1 + ox, 51 + oy);
+    ctx.fillText(title, tx + 1 + ox, 81 + oy);
     ctx.fillStyle = '#e94560';
-    ctx.fillText(title, tx + ox, 50 + oy);
+    ctx.fillText(title, tx + ox, 80 + oy);
 
     // Subtitle
-    ctx.font = '6px "Press Start 2P"';
-    ctx.fillStyle = '#6b6b6b';
+    ctx.font = '7px "Press Start 2P"';
+    ctx.fillStyle = '#5a5a6a';
     const sub = 'Um pesadelo quantico';
     const sw = ctx.measureText(sub).width;
-    ctx.fillText(sub, (320 - sw) / 2, 70);
+    ctx.fillText(sub, (W - sw) / 2, 102);
 
-    // Menu options
+    // Menu
     const options = ['Novo Jogo', 'Continuar'];
-    ctx.font = '7px "Press Start 2P"';
+    ctx.font = '9px "Press Start 2P"';
 
     for (let i = 0; i < options.length; i++) {
-      const selected = G.state.titleSelection === i;
-      if (selected) {
+      const sel = G.state.titleSelection === i;
+      const my = 145 + i * 24;
+      if (sel) {
         const pulse = Math.sin(titleFlicker * 4) * 0.3 + 0.7;
-        ctx.fillStyle = `rgba(233, 69, 96, ${pulse})`;
-        ctx.fillText('> ', 100, 105 + i * 16);
+        ctx.fillStyle = `rgba(233,69,96,${pulse})`;
+        ctx.fillText('>', 150, my);
       }
-      ctx.fillStyle = selected ? '#f0e6d3' : '#3a3a3a';
-      ctx.fillText(options[i], 118, 105 + i * 16);
+      ctx.fillStyle = sel ? '#f0e6d3' : '#3a3a4a';
+      ctx.fillText(options[i], 172, my);
     }
 
-    // Controls hint
+    // Controls
     ctx.font = '5px "Press Start 2P"';
-    ctx.fillStyle = '#2a2a3e';
-    ctx.fillText('WASD/Setas: Mover | E/Enter: Interagir', 30, 165);
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillText('WASD/Setas: Mover | E/Enter: Interagir', 100, 240);
 
-    // Handle click on menu options
+    // Handle click
     if (pendingClick) {
-      const cx = pendingClick.x, cy = pendingClick.y;
+      const cy = pendingClick.y;
       pendingClick = null;
-      // Check if click is in menu area
-      if (cx >= 90 && cx <= 250) {
-        if (cy >= 95 && cy <= 110) {
-          G.state.titleSelection = 0;
-          confirmTitleSelection();
-          return;
-        } else if (cy >= 111 && cy <= 126) {
-          G.state.titleSelection = 1;
-          confirmTitleSelection();
-          return;
-        }
-      }
+      if (cy >= 135 && cy <= 155) { G.state.titleSelection = 0; confirmTitle(); return; }
+      if (cy >= 159 && cy <= 179) { G.state.titleSelection = 1; confirmTitle(); return; }
     }
 
-    // Handle keyboard input
+    // Keyboard
     if (keys['ArrowUp'] || keys['KeyW']) {
       G.state.titleSelection = 0;
       keys['ArrowUp'] = false; keys['KeyW'] = false;
@@ -149,18 +124,18 @@
     if (keys['Enter'] || keys['NumpadEnter'] || keys['KeyE'] || keys['Space']) {
       keys['Enter'] = false; keys['NumpadEnter'] = false;
       keys['KeyE'] = false; keys['Space'] = false;
-      confirmTitleSelection();
+      confirmTitle();
       return;
     }
 
     // Scanlines on title
-    for (let y = 0; y < 180; y += 3) {
-      ctx.fillStyle = 'rgba(0,0,0,0.15)';
-      ctx.fillRect(0, y, 320, 1);
+    for (let y = 0; y < H; y += 4) {
+      ctx.fillStyle = 'rgba(0,0,0,0.1)';
+      ctx.fillRect(0, y, W, 1);
     }
   }
 
-  function confirmTitleSelection() {
+  function confirmTitle() {
     G.Audio.sfx.select();
     if (G.state.titleSelection === 0) {
       startNewGame();
@@ -173,12 +148,12 @@
     G.state.mode = 'playing';
     G.state.flags = {};
     G.state.ending = null;
+    G.state.endingTimer = 0;
     G.Sanity.reset();
     G.Player.init(9, 5);
     G.Scenes.init();
     G.Audio.startDrone();
 
-    // Show wake-up dialogue after a moment
     setTimeout(() => {
       G.Dialogue.showSequence(G.Story.dialogues.wake_up);
     }, 1500);
@@ -208,129 +183,102 @@
 
   function saveGame() {
     try {
-      const data = {
+      localStorage.setItem('memorias_partidas_save', JSON.stringify({
         flags: G.state.flags,
         coherence: G.Sanity.value,
         chapter: G.Scenes.chapter,
-        playerX: Math.floor(G.Player.x / 16),
-        playerY: Math.floor(G.Player.y / 16),
+        playerX: Math.floor(G.Player.x / 24),
+        playerY: Math.floor(G.Player.y / 24),
         room: G.Scenes.currentRoomId,
-      };
-      localStorage.setItem('memorias_partidas_save', JSON.stringify(data));
-    } catch(e) { /* silently fail */ }
+      }));
+    } catch(e) {}
   }
 
   /* ===== ENDING SCREEN ===== */
   function renderEnding(ctx, dt) {
     G.state.endingTimer += dt;
-
     const ending = G.state.ending;
     const t = G.state.endingTimer;
 
-    ctx.fillStyle = '#0a0a0f';
-    ctx.fillRect(0, 0, 320, 180);
+    ctx.fillStyle = '#08080c';
+    ctx.fillRect(0, 0, W, H);
 
     if (ending === 'observer') {
-      // Serene dark blue background with stars
-      for (let i = 0; i < 50; i++) {
-        const sx = (Math.sin(i * 7.3 + t * 0.1) * 0.5 + 0.5) * 320;
-        const sy = (Math.cos(i * 4.7 + t * 0.05) * 0.5 + 0.5) * 180;
-        const brightness = Math.sin(t + i) * 0.5 + 0.5;
-        ctx.fillStyle = `rgba(180,200,255,${brightness * 0.4})`;
+      for (let i = 0; i < 60; i++) {
+        const sx = (Math.sin(i * 7.3 + t * 0.1) * 0.5 + 0.5) * W;
+        const sy = (Math.cos(i * 4.7 + t * 0.05) * 0.5 + 0.5) * H;
+        const b = Math.sin(t + i) * 0.5 + 0.5;
+        ctx.fillStyle = `rgba(180,200,255,${b * 0.4})`;
         ctx.fillRect(sx, sy, 1, 1);
       }
-
-      ctx.font = '10px "Press Start 2P"';
+      ctx.font = '14px "Press Start 2P"';
       ctx.fillStyle = '#8aaacc';
-      const title = 'O Observador';
-      ctx.fillText(title, (320 - ctx.measureText(title).width) / 2, 60);
-
+      const tl = 'O Observador';
+      ctx.fillText(tl, (W - ctx.measureText(tl).width) / 2, 90);
       if (t > 2) {
-        ctx.font = '6px "Press Start 2P"';
+        ctx.font = '7px "Press Start 2P"';
         ctx.fillStyle = `rgba(200,200,220,${Math.min(1, t - 2)})`;
-        ctx.fillText('Você vê tudo. Todas as vidas.', 40, 90);
-        ctx.fillText('Todas as possibilidades.', 55, 102);
-        ctx.fillText('E encontra paz no infinito.', 48, 114);
+        ctx.fillText('Voce ve tudo. Todas as vidas.', 100, 130);
+        ctx.fillText('Todas as possibilidades.', 120, 148);
+        ctx.fillText('E encontra paz no infinito.', 110, 166);
       }
     } else if (ending === 'collapse') {
-      // Chaotic, glitchy
       if (Math.random() < 0.3) {
         ctx.fillStyle = `rgba(${Math.random()*255},0,${Math.random()*100},0.1)`;
-        ctx.fillRect(Math.random()*320, Math.random()*180, Math.random()*100, Math.random()*5);
+        ctx.fillRect(Math.random()*W, Math.random()*H, Math.random()*120, Math.random()*4);
       }
-
-      const glitchText = (text, x, y) => {
-        let display = '';
-        for (const ch of text) {
-          display += Math.random() < 0.1 ? String.fromCharCode(9600 + Math.floor(Math.random()*32)) : ch;
-        }
-        ctx.fillText(display, x + (Math.random()-0.5)*4, y + (Math.random()-0.5)*2);
-      };
-
-      ctx.font = '10px "Press Start 2P"';
+      ctx.font = '14px "Press Start 2P"';
       ctx.fillStyle = '#e94560';
-      glitchText('O Colapso', 90, 50);
-
+      const tl = 'O Colapso';
+      const glitchX = (Math.random() - 0.5) * 4;
+      ctx.fillText(tl, (W - ctx.measureText(tl).width) / 2 + glitchX, 80);
       if (t > 2) {
-        ctx.font = '6px "Press Start 2P"';
-        ctx.fillStyle = `rgba(233,69,96,${Math.min(1, t - 2)})`;
-        glitchText('Tudo se comprime.', 70, 80);
-        glitchText('Todo universo. Toda possibilidade.', 20, 95);
-      }
-
-      if (t > 5) {
         ctx.font = '7px "Press Start 2P"';
-        ctx.fillStyle = `rgba(240,230,211,${Math.min(1, (t - 5) * 0.3)})`;
-        const bigQ = 'E se o Big Bang foi alguém';
-        const bigQ2 = 'como eu... tentando voltar?';
-        ctx.fillText(bigQ, (320 - ctx.measureText(bigQ).width) / 2, 130);
-        ctx.fillText(bigQ2, (320 - ctx.measureText(bigQ2).width) / 2, 145);
+        ctx.fillStyle = `rgba(233,69,96,${Math.min(1, t - 2)})`;
+        ctx.fillText('Tudo se comprime. Todo universo.', 90, 120);
+        ctx.fillText('Toda possibilidade.', 130, 138);
       }
-
+      if (t > 5) {
+        ctx.font = '8px "Press Start 2P"';
+        ctx.fillStyle = `rgba(240,230,211,${Math.min(1, (t - 5) * 0.3)})`;
+        const q1 = 'E se o Big Bang foi alguem';
+        const q2 = 'como eu... tentando voltar?';
+        ctx.fillText(q1, (W - ctx.measureText(q1).width) / 2, 180);
+        ctx.fillText(q2, (W - ctx.measureText(q2).width) / 2, 198);
+      }
       G.Effects.render(ctx, 5);
     } else if (ending === 'choice') {
-      // Warm colors, but with subtle glitches
       ctx.fillStyle = '#1a0a05';
-      ctx.fillRect(0, 0, 320, 180);
-
-      // Warm glow
-      const gradient = ctx.createRadialGradient(160, 90, 20, 160, 90, 120);
-      gradient.addColorStop(0, `rgba(200,160,80,${Math.min(0.15, t * 0.02)})`);
-      gradient.addColorStop(1, 'transparent');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 320, 180);
-
-      ctx.font = '10px "Press Start 2P"';
+      ctx.fillRect(0, 0, W, H);
+      const grad = ctx.createRadialGradient(W/2, H/2, 20, W/2, H/2, 180);
+      grad.addColorStop(0, `rgba(200,160,80,${Math.min(0.15, t * 0.02)})`);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      ctx.font = '14px "Press Start 2P"';
       ctx.fillStyle = '#c8a860';
-      const title = 'A Escolha';
-      ctx.fillText(title, (320 - ctx.measureText(title).width) / 2, 50);
-
+      const tl = 'A Escolha';
+      ctx.fillText(tl, (W - ctx.measureText(tl).width) / 2, 80);
       if (t > 2) {
-        ctx.font = '6px "Press Start 2P"';
+        ctx.font = '8px "Press Start 2P"';
         ctx.fillStyle = `rgba(200,180,140,${Math.min(1, t - 2)})`;
-        ctx.fillText('"Papai! Você demorou!"', 60, 80);
+        ctx.fillText('"Papai! Voce demorou!"', 120, 120);
       }
-
       if (t > 4) {
+        ctx.font = '7px "Press Start 2P"';
         ctx.fillStyle = `rgba(150,140,120,${Math.min(1, (t - 4) * 0.5)})`;
-        ctx.fillText('Você sabe que não é real.', 55, 105);
-        ctx.fillText('Mas não importa mais.', 65, 117);
+        ctx.fillText('Voce sabe que nao e real.', 120, 155);
+        ctx.fillText('Mas nao importa mais.', 135, 173);
       }
-
-      // Subtle glitch reminder it's not real
-      if (Math.random() < 0.02) {
-        G.Effects.render(ctx, 60);
-      }
+      if (Math.random() < 0.02) G.Effects.render(ctx, 60);
     }
 
-    // Credits after delay
     if (t > 10) {
-      ctx.font = '5px "Press Start 2P"';
-      const alpha = Math.min(1, (t - 10) * 0.2);
-      ctx.fillStyle = `rgba(100,100,100,${alpha})`;
-      ctx.fillText('MEMÓRIAS PARTIDAS', 105, 160);
-      ctx.fillText('Pressione ESC para voltar ao título', 50, 172);
-
+      ctx.font = '6px "Press Start 2P"';
+      const a = Math.min(1, (t - 10) * 0.2);
+      ctx.fillStyle = `rgba(100,100,100,${a})`;
+      ctx.fillText('MEMORIAS PARTIDAS', 170, 240);
+      ctx.fillText('Pressione ESC para voltar ao titulo', 100, 255);
       if (keys['Escape']) {
         keys['Escape'] = false;
         G.state.mode = 'title';
@@ -344,7 +292,6 @@
   function gameLoop(timestamp) {
     const dt = Math.min(0.1, (timestamp - lastTime) / 1000);
     lastTime = timestamp;
-
     const ctx = G.Renderer.ctx;
 
     switch(G.state.mode) {
@@ -353,7 +300,6 @@
         break;
 
       case 'playing':
-        // Update
         if (!G.Dialogue.active) {
           G.Player.update(dt, keys, G.Scenes.currentRoom ? G.Scenes.currentRoom.map : null);
         }
@@ -362,37 +308,27 @@
         G.Effects.update(dt, G.Sanity.value);
         G.Audio.updateDrone(G.Sanity.value);
 
-        // Heartbeat at low coherence
         if (G.Sanity.value < 50 && !G.Audio.heartbeatInterval) {
           G.Audio.startHeartbeat(G.Sanity.value);
         } else if (G.Sanity.value >= 50 && G.Audio.heartbeatInterval) {
           G.Audio.stopHeartbeat();
         }
 
-        // Render
         G.Renderer.clear();
-
-        // Apply screen shake
         ctx.save();
         ctx.translate(G.Effects.shakeX, G.Effects.shakeY);
-
         G.Scenes.render(ctx);
         G.Dialogue.render(ctx, G.Sanity.value);
-
         ctx.restore();
-
-        // Post-processing effects
         G.Effects.render(ctx, G.Sanity.value);
 
-        // Auto-save periodically
         if (Math.random() < 0.001) saveGame();
 
-        // Check for ending trigger
         if (G.state.ending && !G.state.endingPlayed) {
           G.state.endingPlayed = true;
-          const endingDialogue = G.Story.dialogues['ending_' + G.state.ending];
-          if (endingDialogue) {
-            G.Dialogue.showSequence(JSON.parse(JSON.stringify(endingDialogue)));
+          const ed = G.Story.dialogues['ending_' + G.state.ending];
+          if (ed) {
+            G.Dialogue.showSequence(JSON.parse(JSON.stringify(ed)));
             G.Dialogue.onComplete = () => {
               saveGame();
               G.state.mode = 'ending';
@@ -402,11 +338,7 @@
           }
         }
 
-        // Pause
-        if (keys['Escape']) {
-          keys['Escape'] = false;
-          saveGame();
-        }
+        if (keys['Escape']) { keys['Escape'] = false; saveGame(); }
         break;
 
       case 'ending':
@@ -422,20 +354,15 @@
     G.Renderer.init();
     setupCanvasClick();
 
-    // Show click-to-start for audio context
-    const clickOverlay = document.getElementById('click-to-start');
-    clickOverlay.style.display = 'flex';
+    const overlay = document.getElementById('click-to-start');
+    overlay.style.display = 'flex';
 
     const startAudio = () => {
       G.Audio.init();
-      clickOverlay.style.display = 'none';
+      overlay.style.display = 'none';
       document.removeEventListener('click', startAudio);
       document.removeEventListener('keydown', startAudio);
-
-      // Clear all keys to prevent stuck keys from overlay dismissal
       Object.keys(keys).forEach(k => keys[k] = false);
-
-      // Start game loop
       lastTime = performance.now();
       requestAnimationFrame(gameLoop);
     };
@@ -444,7 +371,6 @@
     document.addEventListener('keydown', startAudio);
   }
 
-  // Wait for fonts to load
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(init);
   } else {

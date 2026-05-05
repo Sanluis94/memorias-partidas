@@ -1,41 +1,34 @@
-/* ===== DIALOGUE SYSTEM - Typewriter, Choices, Glitch Text ===== */
+/* ===== DIALOGUE - Typewriter, Choices, Text Corruption ===== */
 (function() {
   'use strict';
 
+  const W = 480, H = 270;
+  const BOX_X = 20, BOX_Y = H - 80, BOX_W = W - 40, BOX_H = 65;
+
   const Dialogue = {
     active: false,
-    queue: [],
-    currentText: '',
-    displayedText: '',
+    text: '',
+    displayText: '',
     charIndex: 0,
-    charTimer: 0,
-    charSpeed: 0.035,
-    choices: null,
-    choiceIndex: 0,
-    onComplete: null,
-    speaker: '',
+    typeSpeed: 0.04,
+    timer: 0,
+    options: null,
+    queue: [],
+    selectedOption: 0,
     isThought: false,
-    waitingForInput: false,
-    glitchText: false,
+    onComplete: null,
 
-    /* Show a dialogue message */
-    show(text, options) {
-      options = options || {};
+    show(text, opts) {
       this.active = true;
-      this.currentText = text;
-      this.displayedText = '';
+      this.text = text;
+      this.displayText = '';
       this.charIndex = 0;
-      this.charTimer = 0;
-      this.choices = options.choices || null;
-      this.choiceIndex = 0;
-      this.onComplete = options.onComplete || null;
-      this.speaker = options.speaker || '';
-      this.isThought = options.isThought || false;
-      this.waitingForInput = false;
-      this.glitchText = options.glitch || false;
+      this.timer = 0;
+      this.isThought = opts && opts.isThought;
+      this.options = (opts && opts.choices) ? opts.choices : null;
+      this.selectedOption = 0;
     },
 
-    /* Queue multiple messages */
     showSequence(messages) {
       if (!messages || messages.length === 0) return;
       this.queue = messages.slice(1);
@@ -50,149 +43,144 @@
     update(dt, keys) {
       if (!this.active) return;
 
-      // Typewriter effect
-      if (this.charIndex < this.currentText.length) {
-        this.charTimer += dt;
-        while (this.charTimer >= this.charSpeed && this.charIndex < this.currentText.length) {
-          this.charTimer -= this.charSpeed;
-          this.displayedText += this.currentText[this.charIndex];
+      // Typewriter
+      if (this.charIndex < this.text.length) {
+        this.timer += dt;
+        if (this.timer >= this.typeSpeed) {
+          this.timer = 0;
           this.charIndex++;
-          // Play text sound every few chars
+          this.displayText = this.text.substring(0, this.charIndex);
           if (this.charIndex % 3 === 0) G.Audio.sfx.text();
         }
 
-        // Skip text on Enter/E/Space
+        // Speed up on confirm
         if (keys['Enter'] || keys['KeyE'] || keys['Space']) {
-          this.displayedText = this.currentText;
-          this.charIndex = this.currentText.length;
-          keys['Enter'] = false;
-          keys['KeyE'] = false;
-          keys['Space'] = false;
+          this.displayText = this.text;
+          this.charIndex = this.text.length;
+          keys['Enter'] = false; keys['KeyE'] = false; keys['Space'] = false;
         }
-      } else if (!this.waitingForInput) {
-        this.waitingForInput = true;
+        return;
       }
 
-      // Handle input when text is done
-      if (this.waitingForInput) {
-        if (this.choices) {
-          // Navigate choices
-          if (keys['ArrowUp'] || keys['KeyW']) {
-            this.choiceIndex = Math.max(0, this.choiceIndex - 1);
-            keys['ArrowUp'] = false;
-            keys['KeyW'] = false;
-            G.Audio.sfx.menuMove();
+      // Navigate choices
+      if (this.options) {
+        if (keys['ArrowUp'] || keys['KeyW']) {
+          this.selectedOption = Math.max(0, this.selectedOption - 1);
+          keys['ArrowUp'] = false; keys['KeyW'] = false;
+          G.Audio.sfx.menuMove();
+        }
+        if (keys['ArrowDown'] || keys['KeyS']) {
+          this.selectedOption = Math.min(this.options.length - 1, this.selectedOption + 1);
+          keys['ArrowDown'] = false; keys['KeyS'] = false;
+          G.Audio.sfx.menuMove();
+        }
+      }
+
+      // Confirm
+      if (keys['Enter'] || keys['KeyE'] || keys['Space']) {
+        keys['Enter'] = false; keys['KeyE'] = false; keys['Space'] = false;
+
+        if (this.options) {
+          const choice = this.options[this.selectedOption];
+          if (choice.effect) {
+            if (choice.effect.flag) G.state.flags[choice.effect.flag] = true;
+            if (choice.effect.sanity) G.Sanity.change(choice.effect.sanity, 'choice');
+            if (choice.effect.ending) {
+              G.state.ending = choice.effect.ending;
+            }
           }
-          if (keys['ArrowDown'] || keys['KeyS']) {
-            this.choiceIndex = Math.min(this.choices.length - 1, this.choiceIndex + 1);
-            keys['ArrowDown'] = false;
-            keys['KeyS'] = false;
-            G.Audio.sfx.menuMove();
-          }
-          if (keys['Enter'] || keys['KeyE'] || keys['Space']) {
-            keys['Enter'] = false;
-            keys['KeyE'] = false;
-            keys['Space'] = false;
-            G.Audio.sfx.select();
-            const choice = this.choices[this.choiceIndex];
-            this.active = false;
-            if (choice.action) choice.action();
-            if (this.onComplete) this.onComplete(this.choiceIndex);
-            return;
+          G.Audio.sfx.select();
+        }
+
+        // Next in queue
+        if (this.queue.length > 0) {
+          const next = this.queue.shift();
+          if (typeof next === 'string') {
+            this.show(next);
+          } else {
+            this.show(next.text, next);
           }
         } else {
-          // Advance on Enter/E/Space
-          if (keys['Enter'] || keys['KeyE'] || keys['Space']) {
-            keys['Enter'] = false;
-            keys['KeyE'] = false;
-            keys['Space'] = false;
-
-            // Check queue
-            if (this.queue.length > 0) {
-              const next = this.queue.shift();
-              if (typeof next === 'string') {
-                this.show(next);
-              } else {
-                this.show(next.text, next);
-              }
-            } else {
-              this.active = false;
-              if (this.onComplete) this.onComplete();
-            }
+          this.active = false;
+          if (this.onComplete) {
+            const cb = this.onComplete;
+            this.onComplete = null;
+            cb();
           }
         }
       }
     },
 
-    render(ctx, coherence) {
+    render(ctx, sanity) {
       if (!this.active) return;
 
-      const boxH = 48;
-      const boxY = 180 - boxH - 4;
-      const boxX = 4;
-      const boxW = 312;
-
-      // Background
-      ctx.fillStyle = 'rgba(10, 10, 15, 0.92)';
-      ctx.fillRect(boxX, boxY, boxW, boxH);
+      // Dialogue box background
+      ctx.fillStyle = this.isThought ? 'rgba(10,8,20,0.92)' : 'rgba(20,15,35,0.92)';
+      ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
 
       // Border
-      ctx.strokeStyle = this.isThought ? '#4a1942' : '#2d1b69';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1);
+      ctx.strokeStyle = this.isThought ? '#4a3880' : '#6a5a2a';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(BOX_X, BOX_Y, BOX_W, BOX_H);
 
-      // Speaker name
-      if (this.speaker) {
-        ctx.font = '6px "Press Start 2P"';
-        ctx.fillStyle = '#c8a860';
-        ctx.fillText(this.speaker, boxX + 6, boxY - 3);
+      // Text with optional corruption
+      let display = this.displayText;
+      if (sanity < 50 && Math.random() < (50 - sanity) / 100) {
+        display = this._corruptText(display, sanity);
       }
 
-      // Text
-      let textColor = this.isThought ? '#8a6ab0' : '#d4d4d4';
       ctx.font = '7px "Press Start 2P"';
-      ctx.fillStyle = textColor;
-
-      let displayText = this.displayedText;
-
-      // Glitch text effect at low coherence
-      if (this.glitchText || coherence < 40) {
-        displayText = this._glitchifyText(displayText, coherence);
-      }
+      ctx.fillStyle = this.isThought ? '#9a8acc' : '#e8dcc0';
 
       // Word wrap
-      const maxWidth = boxW - 16;
-      const lines = this._wrapText(ctx, displayText, maxWidth);
-
-      for (let i = 0; i < Math.min(lines.length, 4); i++) {
-        ctx.fillText(lines[i], boxX + 8, boxY + 12 + i * 10);
+      const maxW = BOX_W - 24;
+      const lines = this._wrapText(ctx, display, maxW);
+      for (let i = 0; i < lines.length && i < 3; i++) {
+        ctx.fillText(lines[i], BOX_X + 12, BOX_Y + 16 + i * 14);
       }
 
       // Choices
-      if (this.choices && this.waitingForInput) {
-        const cy = boxY - 4 - this.choices.length * 14;
-        ctx.fillStyle = 'rgba(10, 10, 15, 0.92)';
-        ctx.fillRect(boxX, cy, boxW, this.choices.length * 14 + 4);
-        ctx.strokeStyle = '#2d1b69';
-        ctx.strokeRect(boxX + 0.5, cy + 0.5, boxW - 1, this.choices.length * 14 + 3);
+      if (this.options && this.charIndex >= this.text.length) {
+        const choiceY = BOX_Y - this.options.length * 18 - 8;
+        ctx.fillStyle = 'rgba(10,8,20,0.9)';
+        ctx.fillRect(BOX_X + 40, choiceY, BOX_W - 80, this.options.length * 18 + 8);
+        ctx.strokeStyle = '#6a5a2a';
+        ctx.strokeRect(BOX_X + 40, choiceY, BOX_W - 80, this.options.length * 18 + 8);
 
-        for (let i = 0; i < this.choices.length; i++) {
-          const selected = i === this.choiceIndex;
-          ctx.fillStyle = selected ? '#e94560' : '#6b6b6b';
-          ctx.font = '7px "Press Start 2P"';
-          const prefix = selected ? '> ' : '  ';
-          ctx.fillText(prefix + this.choices[i].text, boxX + 8, cy + 12 + i * 14);
+        ctx.font = '7px "Press Start 2P"';
+        for (let i = 0; i < this.options.length; i++) {
+          const sel = i === this.selectedOption;
+          if (sel) {
+            const pulse = Math.sin(Date.now() * 0.006) * 0.3 + 0.7;
+            ctx.fillStyle = `rgba(233,69,96,${pulse})`;
+            ctx.fillText('>', BOX_X + 50, choiceY + 14 + i * 18);
+          }
+          ctx.fillStyle = sel ? '#f0e6d3' : '#5a5a6a';
+          ctx.fillText(this.options[i].text, BOX_X + 66, choiceY + 14 + i * 18);
         }
       }
 
-      // "Press Enter" indicator
-      if (this.waitingForInput && !this.choices) {
-        if (Math.floor(performance.now() / 500) % 2) {
-          ctx.fillStyle = '#6b6b6b';
-          ctx.font = '6px "Press Start 2P"';
-          ctx.fillText('▼', boxX + boxW - 14, boxY + boxH - 6);
+      // Continue indicator
+      if (!this.options && this.charIndex >= this.text.length) {
+        const blink = Math.sin(Date.now() * 0.008) > 0;
+        if (blink) {
+          ctx.fillStyle = '#6a5a2a';
+          ctx.fillText('v', BOX_X + BOX_W - 20, BOX_Y + BOX_H - 8);
         }
       }
+    },
+
+    _corruptText(text, sanity) {
+      const glitchChars = '!@#$%&*=+<>?/|~';
+      let result = '';
+      for (const ch of text) {
+        if (Math.random() < (50 - sanity) / 200) {
+          result += glitchChars[Math.floor(Math.random() * glitchChars.length)];
+        } else {
+          result += ch;
+        }
+      }
+      return result;
     },
 
     _wrapText(ctx, text, maxWidth) {
@@ -211,20 +199,6 @@
       if (current) lines.push(current);
       return lines;
     },
-
-    _glitchifyText(text, coherence) {
-      const glitchChars = '░▒▓█▄▀│┤╡╢╣║╗╝¿⌐¬½¼';
-      const intensity = Math.max(0, (60 - coherence) / 60);
-      let result = '';
-      for (let i = 0; i < text.length; i++) {
-        if (Math.random() < intensity * 0.15) {
-          result += glitchChars[Math.floor(Math.random() * glitchChars.length)];
-        } else {
-          result += text[i];
-        }
-      }
-      return result;
-    }
   };
 
   window.G = window.G || {};

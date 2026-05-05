@@ -1,19 +1,8 @@
-/* ===== STORY DATA - Rooms, Dialogues, Chapters ===== */
+/* ===== STORY DATA ===== */
 (function() {
   'use strict';
 
   const Story = {
-    /* ===== ROOMS =====
-       Each room is 20x11 tiles (480x264 at 24px)
-       Connected via D (doors) with explicit mappings
-       Legend:
-         # = wall, . = floor, D = door, B = bed, T = table
-         C = chair, S = cabinet, M = mirror, P = pills
-         V = TV, F = photo, W = window, K = sink
-         L = toilet, U = bathtub, R = fridge, O = stove
-         H = couch, A = bookshelf, E = lamp, I = nightstand
-         N = note, G = rug, X = lab equipment, Q = console, Z = void
-    */
     rooms: {
       bedroom: {
         name: 'Quarto',
@@ -23,9 +12,9 @@
           '#.................A#',
           '#..BBBB...........A#',
           '#..BBBB............#',
-          '#..........G.......#',
-          '#I.........G.......#',
-          '#E.........G.......#',
+          '#..........GGG.....#',
+          '#I.........GGG.....#',
+          '#E.................#',
           '#..................#',
           '#.................P#',
           '########D###D######',
@@ -34,9 +23,8 @@
           'D_8': { target: 'hallway', spawnX: 3, spawnY: 1 },
           'D_12': { target: 'bathroom', spawnX: 9, spawnY: 8 },
         },
-        darkRadius: 130,
+        darkRadius: 120,
       },
-
       bathroom: {
         name: 'Banheiro',
         map: [
@@ -52,20 +40,17 @@
           '#........UUU......D#',
           '####################',
         ],
-        doors: {
-          'D_18': { target: 'bedroom', spawnX: 12, spawnY: 9 },
-        },
-        darkRadius: 110,
+        doors: { 'D_18': { target: 'bedroom', spawnX: 12, spawnY: 9 } },
+        darkRadius: 100,
       },
-
       hallway: {
         name: 'Corredor',
         map: [
           '##D#####D###D######',
           '#.................A#',
-          '#..G..............A#',
-          '#..G...............#',
-          '#..G...............#',
+          '#..GG.............A#',
+          '#..GG..............#',
+          '#..................#',
           '#..................#',
           '#..........F.......#',
           '#E.................#',
@@ -80,9 +65,8 @@
           'D_2_bot': { target: 'laboratory', spawnX: 9, spawnY: 1 },
           'D_13_bot': { target: 'void_room', spawnX: 9, spawnY: 1 },
         },
-        darkRadius: 120,
+        darkRadius: 110,
       },
-
       living_room: {
         name: 'Sala de Estar',
         map: [
@@ -98,12 +82,9 @@
           '#..................#',
           '#########D#########',
         ],
-        doors: {
-          'D_9': { target: 'hallway', spawnX: 8, spawnY: 1 },
-        },
-        darkRadius: 140,
+        doors: { 'D_9': { target: 'hallway', spawnX: 8, spawnY: 1 } },
+        darkRadius: 130,
       },
-
       kitchen: {
         name: 'Cozinha',
         map: [
@@ -119,12 +100,9 @@
           '#.................K#',
           '#########D#########',
         ],
-        doors: {
-          'D_9': { target: 'hallway', spawnX: 12, spawnY: 1 },
-        },
-        darkRadius: 130,
+        doors: { 'D_9': { target: 'hallway', spawnX: 12, spawnY: 1 } },
+        darkRadius: 120,
       },
-
       laboratory: {
         name: 'Laboratorio',
         map: [
@@ -140,12 +118,9 @@
           '#..XX.........XX...#',
           '#########D#########',
         ],
-        doors: {
-          'D_9': { target: 'hallway', spawnX: 2, spawnY: 9 },
-        },
-        darkRadius: 120,
+        doors: { 'D_9': { target: 'hallway', spawnX: 2, spawnY: 9 } },
+        darkRadius: 110,
       },
-
       void_room: {
         name: '???',
         map: [
@@ -161,273 +136,343 @@
           'Z..................Z',
           'ZZZZZZZZDZZZZZZZZZZZ',
         ],
-        doors: {
-          'D_8': { target: 'hallway', spawnX: 13, spawnY: 9 },
-        },
-        darkRadius: 180,
+        doors: { 'D_8': { target: 'hallway', spawnX: 13, spawnY: 9 } },
+        darkRadius: 200,
       },
     },
 
-    /* ===== DIALOGUES ===== */
     dialogues: {
+      // ===== CAPITULO 1: A ROTINA =====
       wake_up: [
         { text: '...', isThought: true },
-        { text: 'Mais um dia.', isThought: true },
-        { text: 'A cabeca pesa. Os olhos ardem.', isThought: true },
-        { text: 'Eu devia tomar meu remedio...', isThought: true },
-        { text: 'Mas a capsula... mudou de cor?', isThought: true },
+        { text: 'O teto. Manchas de umidade que parecem rostos.', isThought: true },
+        { text: 'Sempre os mesmos rostos.', isThought: true },
+        { text: 'Quanto tempo eu dormi? Horas? Dias?', isThought: true },
+        { text: 'O relogio na parede parou. De novo.', isThought: true },
+        { text: 'Meus remedios... preciso tomar meus remedios.', isThought: true },
       ],
 
       bed_interact: [
-        { text: 'Minha cama. O unico lugar que parece seguro.', isThought: true },
-        { text: 'Mas os sonhos nao sao melhores que a realidade.', isThought: true },
+        { text: 'Os lencois estao encharcados de suor.', isThought: true },
+        { text: 'Sonhei com ela de novo. Maria.', isThought: true },
+        { text: 'Mas no sonho ela estava... diferente. Mais jovem.', isThought: true },
+        { text: 'E a menina... quem era aquela menina?', isThought: true },
       ],
 
       nightstand_interact: [
-        { text: 'O criado-mudo. Gaveta cheia de coisas que nao reconheco.', isThought: true },
+        { text: 'A gaveta esta cheia de coisas que nao reconheco.', isThought: true },
+        { text: 'Um cracha com meu nome. "Dr. A. Meira - Fisica Quantica"', isThought: true },
+        { text: 'Fisica? Eu sou fisico? Nao... eu sou...', isThought: true },
+        { text: 'O que eu sou, afinal?', isThought: true },
       ],
 
       lamp_interact: [
-        { text: 'A luz pisca. Sempre piscou assim?', isThought: true },
+        { text: 'A lampada pisca. Um ritmo quase matematico.', isThought: true },
+        { text: 'Tres piscadas curtas. Uma longa. Tres curtas.', isThought: true },
+        { text: 'Parece... codigo Morse? Mas isso e ridiculo.', isThought: true },
       ],
 
       bookshelf_interact: [
-        { text: 'Livros... nao me lembro de ter lido nenhum deles.', isThought: true },
-        { text: 'Espera. "Mecanica Quantica Avancada"?', isThought: true },
-        { text: 'Por que eu teria isso?', isThought: true },
+        { text: 'Os livros nas prateleiras nao fazem sentido juntos.', isThought: true },
+        { text: '"Mecanica Quantica Avancada" ao lado de "Conto de Fadas".', isThought: true },
+        { text: '"Teoria das Cordas" ao lado de "Receitas da Vovo".', isThought: true },
+        { text: 'Como se duas vidas diferentes dividissem a mesma estante.', isThought: true },
       ],
 
       window_interact: [
-        { text: 'La fora... esta diferente do que eu lembrava.', isThought: true },
-        { text: 'As estrelas parecem estar no lugar errado.', isThought: true },
+        { text: 'La fora esta escuro. Completamente escuro.', isThought: true },
+        { text: 'Nenhuma luz. Nenhuma estrela. Nenhum som.', isThought: true },
+        { text: 'Como se nao houvesse NADA alem deste apartamento.', isThought: true },
+        { text: 'Isso nao e normal. Mas o que e normal aqui?', isThought: true },
       ],
 
       pills_interact_1: [
-        { text: 'Meus remedios. Antidepressivos.', isThought: true },
-        { text: 'A capsula esta... vermelha? Ela era azul ontem.', isThought: true },
-        { text: 'Deve ser coisa da minha cabeca.', isThought: true },
+        { text: 'O frasco de remedios. Antidepressivos, diz o rotulo.', isThought: true },
+        { text: 'Mas a capsula... ela era AZUL ontem. Tenho certeza.', isThought: true },
+        { text: 'Agora e vermelha. Um vermelho vivo, quase pulsante.', isThought: true },
+        { text: 'Minha mao treme ao segura-la.', isThought: true },
         {
           text: 'Tomar o remedio?',
           choices: [
-            { text: 'Sim, tomar', effect: { flag: 'tookPill1', sanity: 10 } },
-            { text: 'Nao, algo esta errado', effect: { flag: 'refusedPill1', sanity: -5 } },
+            { text: 'Engolir a capsula', effect: { flag: 'tookPill1', sanity: 8 } },
+            { text: 'Largar. Algo esta muito errado.', effect: { flag: 'refusedPill1', sanity: -8 } },
           ],
         },
       ],
 
       pills_interact_2: [
-        { text: 'Os remedios mudaram de cor de novo.', isThought: true },
-        { text: 'Isso nao e normal. NADA disso e normal.', isThought: true },
+        { text: 'A cor mudou DE NOVO.', isThought: true },
+        { text: 'Agora e... verde? Dourada?', isThought: true },
+        { text: 'Nao consigo nem descrever. A cor nao deveria EXISTIR.', isThought: true },
+        { text: 'Sera que os remedios sao a causa... ou a cura?', isThought: true },
       ],
 
       mirror_interact_1: [
-        { text: 'Meu reflexo me olha de volta.', isThought: true },
-        { text: 'Pareco cansado. Velho demais para a idade que tenho.', isThought: true },
+        { text: 'Meu reflexo. Olheiras profundas. Barba por fazer.', isThought: true },
+        { text: 'Pareco ter envelhecido dez anos em uma noite.', isThought: true },
+        { text: 'Ou sera que EU e que pareco jovem demais?', isThought: true },
       ],
-
       mirror_interact_2: [
-        { text: 'O reflexo... demorou para se mover.', isThought: true },
-        { text: 'Nao. Impossivel. E o cansaco.', isThought: true },
+        { text: 'Eu virei a cabeca. O reflexo demorou a acompanhar.', isThought: true },
+        { text: 'Foi... foi so um instante de atraso. Imperceptivel.', isThought: true },
+        { text: 'Mas eu PERCEBI.', isThought: true },
+        { text: 'Tem algo errado com esse espelho. Ou comigo.', isThought: true },
       ],
-
       mirror_interact_3: [
-        { text: 'O reflexo SORRIU.', isThought: true },
-        { text: 'EU NAO ESTOU SORRINDO.', isThought: true },
+        { text: 'NAO.', isThought: true },
+        { text: 'O reflexo SORRIU. E eu nao estou sorrindo.', isThought: true },
+        { text: 'Os olhos dele... sao diferentes. Mais calmos.', isThought: true },
+        { text: 'Como se ele soubesse algo que eu nao sei.', isThought: true },
+        { text: 'Como se ele fosse... outro eu.', isThought: true },
       ],
 
       photo_interact_1: [
-        { text: 'Uma foto na parede. Uma familia.', isThought: true },
-        { text: 'Uma mulher sorrindo, uma crianca nos bracos.', isThought: true },
-        { text: 'Sao... meus? Eu tive uma filha?', isThought: true },
+        { text: 'Uma foto emoldurada. Eu, uma mulher, uma crianca.', isThought: true },
+        { text: 'A mulher sorri. O cabelo castanho cai sobre os ombros.', isThought: true },
+        { text: 'A crianca nos bracos dela me olha com olhos enormes.', isThought: true },
+        { text: 'Eu SINTO que os conheco. Mas nao lembro seus nomes.', isThought: true },
+        { text: 'Minha garganta aperta. Quem sao voces?', isThought: true },
       ],
-
       photo_interact_2: [
-        { text: 'A foto... mudou.', isThought: true },
-        { text: 'Agora so tem EU na foto. Sozinho.', isThought: true },
-        { text: 'Ou... sempre foi assim?', isThought: true },
+        { text: 'A foto... MUDOU.', isThought: true },
+        { text: 'Agora estou sozinho na foto. Ninguem ao meu lado.', isThought: true },
+        { text: 'Nao... eu NAO ESTAVA sozinho. Eles estavam aqui.', isThought: true },
+        { text: 'EU VI. Eu LEMBRO.', isThought: true },
+        { text: 'Lembro?', isThought: true },
       ],
 
       tv_interact_1: [
-        { text: 'A TV so mostra estatica.', isThought: true },
-        { text: 'Mas entre o chiado... vozes?', isThought: true },
-        { text: '"...colapso da funcao de onda... estabilizando..."', isThought: true },
+        { text: 'A TV liga sozinha. So estatica.', isThought: true },
+        { text: 'Mas entre o chiado... fragmentos de som.', isThought: true },
+        { text: '"...colapso da funcao... estabilizando campo..."', isThought: true },
+        { text: '"...sujeito 01 nao responde... sinais vitais..."', isThought: true },
+        { text: 'Sujeito 01? Estao falando de MIM?', isThought: true },
       ],
 
       couch_interact: [
-        { text: 'O sofa esta frio. Como se ninguem sentasse nele ha anos.', isThought: true },
+        { text: 'O sofa esta gelado ao toque.', isThought: true },
+        { text: 'Tem uma marca no assento. Como se alguem sentasse aqui todo dia.', isThought: true },
+        { text: 'Mas eu nao me lembro de sentar aqui. Nunca.', isThought: true },
       ],
 
       fridge_interact: [
-        { text: 'A geladeira esta quase vazia.', isThought: true },
-        { text: 'As datas nos produtos... sao de anos diferentes.', isThought: true },
+        { text: 'A geladeira zumbe num tom grave e constante.', isThought: true },
+        { text: 'Dentro: leite com data de 2019. Queijo de 2023. Suco de 2021.', isThought: true },
+        { text: 'Nenhuma data faz sentido. Que ANO e esse?', isThought: true },
+        { text: 'Eu... nao sei que ano e.', isThought: true },
       ],
 
       stove_interact: [
-        { text: 'O fogao. Nao me lembro da ultima vez que cozinhei.', isThought: true },
+        { text: 'O fogao. Frio. Uma camada de poeira cobre as bocas.', isThought: true },
+        { text: 'Ninguem cozinha aqui ha muito tempo.', isThought: true },
+        { text: 'Mas tem cheiro de cafe fresco no ar. De onde?', isThought: true },
       ],
 
       kitchen_table_interact: [
-        { text: 'A mesa da cozinha. Marcas de uso, mas parece abandonada.', isThought: true },
+        { text: 'Marcas de copos na mesa. Dezenas deles. Sobrepostos.', isThought: true },
+        { text: 'Como se eu tivesse sentado aqui milhares de vezes.', isThought: true },
+        { text: 'Vivendo o mesmo dia. Repetidamente.', isThought: true },
       ],
 
       note1_interact: [
-        { text: 'Um bilhete na geladeira... minha letra?', isThought: true },
-        { text: '"NAO ESQUECER: O EXPERIMENTO NAO PODE FALHAR"', isThought: true },
-        { text: 'Que experimento?!', isThought: true },
+        { text: 'Um bilhete colado na geladeira. Minha caligrafia. Tremente.', isThought: true },
+        { text: '"NAO CONFIE NAS MEMORIAS. NAO CONFIE NOS REMEDIOS."', isThought: true },
+        { text: '"O EXPERIMENTO ESTA DENTRO DE VOCE."', isThought: true },
+        { text: 'Meu coracao acelera. Eu escrevi isso. Quando? Por que?', isThought: true },
       ],
 
-      // === Chapter 2: A Duvida ===
+      hallway_photo_interact: [
+        { text: 'Outra foto no corredor. Mas essa... nao e uma foto normal.', isThought: true },
+        { text: 'Mostra um laboratorio. Equipamentos enormes. Luzes brancas.', isThought: true },
+        { text: 'Eu estou no centro da foto. De jaleco. Sorrindo.', isThought: true },
+        { text: 'Atras de mim, um anel de metal gigantesco. Um acelerador?', isThought: true },
+      ],
+
+      // ===== CAPITULO 2: A DUVIDA =====
       doubt_begins: [
-        { text: 'As paredes... estao respirando?', isThought: true },
-        { text: 'Nao. E a luz. A luz esta ERRADA.', isThought: true },
-        { text: 'O espectro visivel esta falhando.', isThought: true },
+        { text: 'A luz acaba de mudar.', isThought: true },
+        { text: 'Nao a lampada. A propria LUZ. O espectro visivel.', isThought: true },
+        { text: 'As cores estao... erradas. Como um filtro quebrado.', isThought: true },
+        { text: 'Isso nao sao os remedios. Isso e outra coisa.', isThought: true },
+        { text: 'As paredes parecem respirar. Expandir e contrair.', isThought: true },
+        { text: 'Eu preciso entender o que esta acontecendo.', isThought: true },
       ],
 
       floating_object: [
-        { text: 'Aquilo esta... flutuando?!', isThought: true },
-        { text: 'Nao. Deve ser uma vertigem. Os remedios.', isThought: true },
+        { text: 'Aquilo... aquilo esta FLUTUANDO.', isThought: true },
+        { text: 'Objetos nao flutuam. A gravidade e uma constante.', isThought: true },
+        { text: '...e uma constante?', isThought: true },
+        { text: 'Por que eu sinto que a gravidade NAO e uma constante aqui?', isThought: true },
       ],
 
       static_event: [
-        { text: 'Essa estatica... vem de todo lugar.', isThought: true },
-        { text: 'Nao e som. E como se a propria realidade chiasse.', isThought: true },
-        { text: 'Radiacao cosmica de fundo?! Aqui dentro?!', isThought: true },
+        { text: 'O chiado. De todo lugar. De nenhum lugar.', isThought: true },
+        { text: 'Nao e som. E mais como... informacao bruta.', isThought: true },
+        { text: 'Dados. Flutuando no ar como particulas.', isThought: true },
+        { text: 'Radiacao cosmica de fundo. AQUI DENTRO?', isThought: true },
+        { text: 'Isso so seria possivel se...', isThought: true },
+        { text: '...se as barreiras entre os universos fossem finas aqui.', isThought: true },
       ],
 
-      // === Chapter 3: Fragmentos ===
+      // ===== CAPITULO 3: FRAGMENTOS =====
       memory_wife_death_1: [
-        { text: '...Maria...', isThought: true },
-        { text: 'Ela morreu em um acidente de carro.', isThought: true },
-        { text: 'Nao... Ela morreu de doenca. No hospital.', isThought: true },
-        { text: 'Nao... Eu a VI ontem. Ela esta viva?!', isThought: true },
-        { text: 'QUAL MEMORIA E REAL?', isThought: true },
+        { text: 'Um flash. Uma memoria invade minha mente.', isThought: true },
+        { text: 'Maria. O hospital. Maquinas apitando.', isThought: true },
+        { text: '"Eu te amo", ela disse. Depois silencio.', isThought: true },
+        { text: '...Nao. Nao foi assim.', isThought: true },
+        { text: 'Maria. A estrada. Farois na chuva. O impacto.', isThought: true },
+        { text: '...Nao. Tambem nao.', isThought: true },
+        { text: 'Maria. Sorrindo. Ontem. Viva. Na cozinha.', isThought: true },
+        { text: 'QUAL DESSAS E REAL?', isThought: true },
+        { text: 'TODAS parecem reais. TODAS doem igual.', isThought: true },
       ],
 
       memory_daughter: [
         { text: '"Papai! Voce demorou!"', isThought: true },
-        { text: 'Uma menina corre em minha direcao.', isThought: true },
-        { text: 'Minha filha... mas eu nao tenho uma filha.', isThought: true },
-        { text: 'Ou tenho?', isThought: true },
+        { text: 'Uma menina de cabelos castanhos corre ate mim.', isThought: true },
+        { text: 'O abraco e quente. Real. Cheira a sabonete infantil.', isThought: true },
+        { text: 'Minha filha. Sophia.', isThought: true },
+        { text: '...Eu NAO tenho uma filha. Eu nunca tive filhos.', isThought: true },
+        { text: 'Mas esse nome... Sophia... por que sei o nome dela?', isThought: true },
+        { text: 'Por que a saudade aperta o peito como se fosse real?', isThought: true },
       ],
 
-      // === Chapter 4: O Laboratorio ===
+      // ===== CAPITULO 4: O LABORATORIO =====
       lab_note_1: [
-        { text: 'Um diario de laboratorio. Minha caligrafia.', isThought: true },
-        { text: '"Dia 147: O acelerador esta estavel."', isThought: true },
-        { text: '"A anomalia quantica se intensifica."', isThought: true },
-        { text: '"Se meus calculos estiverem certos..."', isThought: true },
-        { text: '"...poderemos observar a sobreposicao em escala macroscopica."', isThought: true },
+        { text: 'Um caderno grosso. Capa de couro gasto. Minha caligrafia.', isThought: true },
+        { text: '"Diario de Pesquisa - Projeto Observador"', isThought: true },
+        { text: '"Dia 147: O acelerador de particulas esta estavel."', isThought: true },
+        { text: '"A anomalia quantica no setor 7 se intensifica."', isThought: true },
+        { text: '"Detectamos sobreposicao de estados em escala MACROSCOPICA."', isThought: true },
+        { text: '"Isso nao deveria ser possivel."', isThought: true },
+        { text: '"Se meus calculos estiverem corretos, estamos observando..."', isThought: true },
+        { text: '"...a fronteira entre universos paralelos."', isThought: true },
       ],
 
       lab_note_2: [
-        { text: 'Mais anotacoes...', isThought: true },
+        { text: 'Mais paginas. A caligrafia fica cada vez mais tremula.', isThought: true },
+        { text: '"Dia 201: A equipe quer suspender o projeto. Eu recusei."', isThought: true },
+        { text: '"Dia 202: Estou vendo coisas. Versoes de mim nos reflexos."', isThought: true },
         { text: '"Dia 203: O ACIDENTE."', isThought: true },
-        { text: '"A funcao de onda nao colapsou. Eu estou DENTRO dela."', isThought: true },
-        { text: '"Todas as realidades existem simultaneamente."', isThought: true },
-        { text: '"Eu sou o observador preso dentro da caixa de Schrodinger."', isThought: true },
+        { text: '"A funcao de onda nao colapsou."', isThought: true },
+        { text: '"A barreira se rompeu. Eu estava no centro."', isThought: true },
+        { text: '"Eu nao morri. Eu ENTREI."', isThought: true },
+        { text: '"Estou preso dentro da sobreposicao quantica."', isThought: true },
+        { text: '"Todas as realidades. Simultaneamente. Na mesma consciencia."', isThought: true },
+        { text: '"Eu sou o observador de Schrodinger."', isThought: true },
+        { text: '"Preso DENTRO da caixa."', isThought: true },
       ],
 
       lab_equipment_interact: [
-        { text: 'Equipamento de laboratorio. Isso e... MEU?', isThought: true },
-        { text: 'Os monitores mostram dados quanticos. Funcoes de onda.', isThought: true },
-        { text: 'Eu ENTENDO esses dados. Eu sou um fisico.', isThought: true },
+        { text: 'Monitores. Graficos. Funcoes de onda.', isThought: true },
+        { text: 'Eu ENTENDO esses dados. Cada equacao. Cada variavel.', isThought: true },
+        { text: 'Essa e a minha mao nos dados. Meu codigo. Meu trabalho.', isThought: true },
+        { text: 'Eu era um fisico. Dr. Alexandre Meira.', isThought: true },
+        { text: 'E eu destrui as barreiras entre os universos.', isThought: true },
       ],
 
-      // === Chapter 5: A Dobra ===
+      // ===== CAPITULO 5: A DOBRA =====
       void_revelation: [
-        { text: 'Eu entendo agora.', isThought: true },
+        { text: 'O vazio.', isThought: true },
+        { text: 'Nao e escuridao. E AUSENCIA. De tudo.', isThought: true },
+        { text: 'E aqui que as realidades se encontram.', isThought: true },
+        { text: 'Eu entendo agora. Tudo.', isThought: true },
         { text: 'A estatica nao eram fantasmas.', isThought: true },
-        { text: 'E a radiacao cosmica de fundo vazando para ca.', isThought: true },
+        { text: 'E a radiacao cosmica de fundo vazando entre as realidades.', isThought: true },
         { text: 'As distorcoes da luz sao falhas no espectro visivel.', isThought: true },
+        { text: 'Os objetos flutuam porque a gravidade colapsa aqui.', isThought: true },
         { text: 'Eu nao perdi a razao.', isThought: true },
-        { text: 'Eu estou VIVENDO o multiverso.', isThought: true },
-        { text: 'As memorias conflitantes da minha esposa...', isThought: true },
-        { text: '...a filha que tive e nao tive...', isThought: true },
-        { text: '...sao realidades de OUTROS EUS.', isThought: true },
-        { text: 'Infinitos universos paralelos sobrepostos.', isThought: true },
-        { text: 'Todos acontecendo na mesma consciencia.', isThought: true },
-        { text: 'Eu sou o observador de Schrodinger.', isThought: true },
-        { text: 'Preso DENTRO da caixa.', isThought: true },
+        { text: 'Eu estou VIVENDO o multiverso na pele.', isThought: true },
+        { text: 'As memorias da Maria morrendo de formas diferentes...', isThought: true },
+        { text: 'Sao memorias REAIS. De outros EUS. De outros universos.', isThought: true },
+        { text: 'A Sophia que me chamou de papai existe. Em um deles.', isThought: true },
+        { text: 'Todas as possibilidades. Sobrepostas na mesma mente.', isThought: true },
+        { text: 'E eu sou o unico que pode ver todas elas.', isThought: true },
       ],
 
       final_choice: [
-        { text: 'E agora? O que eu faco?', isThought: true },
+        { text: 'O Projeto Observador destruiu a barreira.', isThought: true },
+        { text: 'Eu destrui a barreira.', isThought: true },
+        { text: 'E agora... o que eu faco com o infinito?', isThought: true },
         {
-          text: 'Escolha o seu destino:',
+          text: 'Escolha:',
           choices: [
-            { text: 'Aceitar e observar tudo', effect: { ending: 'observer' } },
-            { text: 'Tentar colapsar tudo de volta', effect: { ending: 'collapse' } },
-            { text: 'Escolher UMA realidade e ficar', effect: { ending: 'choice' } },
+            { text: 'Aceitar. Observar tudo. Para sempre.', effect: { ending: 'observer' } },
+            { text: 'Forcar o colapso. Destruir tudo de volta.', effect: { ending: 'collapse' } },
+            { text: 'Escolher UMA realidade. Sophia. Mesmo que nao seja real.', effect: { ending: 'choice' } },
           ],
         },
       ],
 
       ending_observer: [
         { text: 'Voce aceita.', isThought: true },
-        { text: 'Todas as vidas. Todas as mortes.', isThought: true },
-        { text: 'Todas as possibilidades.', isThought: true },
+        { text: 'Fecha os olhos. Abre a mente.', isThought: true },
+        { text: 'E ve TUDO. Todas as vidas que viveu e nao viveu.', isThought: true },
+        { text: 'Todas as versoes de Maria. Viva. Morta. Nunca existiu.', isThought: true },
+        { text: 'Todas as versoes de Sophia. Sorrindo. Chorando. Esperando.', isThought: true },
         { text: 'E encontra uma paz estranha no infinito.', isThought: true },
+        { text: 'A paz de quem finalmente para de lutar.', isThought: true },
       ],
 
       ending_collapse: [
-        { text: 'Voce tenta forcar o colapso.', isThought: true },
-        { text: 'Toda materia. Toda energia. Todo universo.', isThought: true },
-        { text: 'Comprimidos em um unico ponto.', isThought: true },
+        { text: 'Voce decide.', isThought: true },
+        { text: 'Se voce abriu a caixa, voce pode fecha-la.', isThought: true },
+        { text: 'Toda materia. Toda energia. Toda possibilidade.', isThought: true },
+        { text: 'Comprimidas em um unico ponto infinitamente denso.', isThought: true },
+        { text: 'A dor e absoluta. E breve.', isThought: true },
+        { text: 'Depois... BANG.', isThought: true },
         { text: '"E se o Big Bang foi alguem como eu..."', isThought: true },
-        { text: '"...tentando voltar?"', isThought: true },
+        { text: '"...tentando voltar para casa?"', isThought: true },
       ],
 
       ending_choice: [
         { text: '"Papai! Voce demorou!"', isThought: true },
-        { text: 'A menina corre ate voce.', isThought: true },
-        { text: 'Voce sabe que nao e real.', isThought: true },
-        { text: 'Mas abraca ela mesmo assim.', isThought: true },
-        { text: 'Nao importa mais.', isThought: true },
+        { text: 'Sophia corre ate voce. Cabelos castanhos ao vento.', isThought: true },
+        { text: 'O abraco e quente. Real. Cheira a sabonete infantil.', isThought: true },
+        { text: 'Maria aparece na porta da cozinha. Sorrindo.', isThought: true },
+        { text: '"O jantar esta quase pronto", ela diz.', isThought: true },
+        { text: 'Voce sabe que isso nao e real.', isThought: true },
+        { text: 'Voce sabe que e so uma das infinitas possibilidades.', isThought: true },
+        { text: 'Mas o abraco de Sophia e quente.', isThought: true },
+        { text: 'E isso basta.', isThought: true },
       ],
     },
 
-    /* ===== CHAPTERS ===== */
     chapters: {
       1: {
         name: 'A Rotina',
         startRoom: 'bedroom',
         availableRooms: ['bedroom', 'hallway', 'bathroom', 'kitchen', 'living_room'],
         events: ['wake_up'],
-        unlockCondition: null,
       },
       2: {
         name: 'A Duvida',
         startRoom: 'bedroom',
         availableRooms: ['bedroom', 'hallway', 'bathroom', 'kitchen', 'living_room'],
         events: ['doubt_begins', 'floating_object', 'static_event'],
-        unlockCondition: 'ch1_complete',
       },
       3: {
         name: 'Fragmentos',
         startRoom: 'bedroom',
         availableRooms: ['bedroom', 'hallway', 'bathroom', 'kitchen', 'living_room'],
         events: ['memory_wife_death_1', 'memory_daughter'],
-        unlockCondition: 'ch2_complete',
       },
       4: {
         name: 'O Laboratorio',
         startRoom: 'hallway',
         availableRooms: ['bedroom', 'hallway', 'bathroom', 'kitchen', 'living_room', 'laboratory'],
         events: [],
-        unlockCondition: 'ch3_complete',
       },
       5: {
         name: 'A Dobra',
         startRoom: 'hallway',
         availableRooms: ['bedroom', 'hallway', 'bathroom', 'kitchen', 'living_room', 'laboratory', 'void_room'],
         events: [],
-        unlockCondition: 'ch4_complete',
       },
     },
 
     getRandomPillColor() {
-      const colors = ['#e94560', '#4a90d9', '#4af', '#c850c0', '#50c878', '#ff6b35', '#ffd700'];
-      return colors[Math.floor(Math.random() * colors.length)];
+      return ['#8a1020','#2040a0','#20a060','#8030a0','#a08020','#a04020'][Math.floor(Math.random()*6)];
     },
   };
 

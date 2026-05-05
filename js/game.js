@@ -194,6 +194,8 @@
         G.state.mode = 'playing';
         G.Player.init(data.playerX || 9, data.playerY || 5);
         G.Scenes.chapter = data.chapter || 1;
+        G.Scenes.fadeAlpha = 0;
+        G.Scenes.fadeDir = 0;
         G.Scenes.loadChapter(data.chapter || 1);
         G.Audio.startDrone();
       } else {

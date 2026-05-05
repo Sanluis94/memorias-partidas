@@ -20,7 +20,14 @@
     pillColor: '#e94560',
 
     init() {
+      this.chapter = 1;
+      this.eventTimer = 0;
+      this.chapterTitleTimer = 5;
+      this.endingTriggered = false;
+      this.fadeAlpha = 0;
+      this.fadeDir = 0;
       this.loadChapter(1);
+      this.loadRoom('bedroom', 9, 5);
     },
 
     loadChapter(num) {

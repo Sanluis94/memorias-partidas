@@ -270,6 +270,9 @@
 
   // Main loop
   let lastTime = 0;
+  let stareTarget = null;
+  let stareTimer = 0;
+
   function gameLoop(ts) {
     const dt = Math.min(0.1, (ts-lastTime)/1000); lastTime = ts;
 
@@ -277,37 +280,64 @@
       if (!DLG.active && fadeDir === 0 && chapterTitleTimer <= 0) {
         G.World3D.update(dt, keys, state.sanity);
 
+        const currentTarget = G.World3D.getInteractTarget();
+        
+        // Staring Mechanic
+        if (currentTarget && currentTarget === stareTarget) {
+          stareTimer += dt;
+          if (stareTimer > 4) { // Stared for 4 seconds
+            stareTimer = 0;
+            if (state.sanity < 70) {
+              state.sanity -= 5;
+              DLG.show('Nao deveria olhar tanto para isso...', {isThought: true});
+              try { G.Audio.sfx.step(); } catch(e){} // Sudden sound
+            }
+          }
+        } else {
+          stareTarget = currentTarget;
+          stareTimer = 0;
+        }
+
         // Door check
         if (keys['KeyE']||keys['Enter']) {
           const door = G.World3D.checkDoor();
           if (door) {
             keys['KeyE']=keys['Enter']=false;
             const ch = G.Story.chapters[state.chapter];
-            if(ch&&ch.availableRooms.includes(door.targetRoom)) {
-              transitionTo(door.targetRoom, door.targetX, door.targetZ);
+            
+            // Door Misdirection (Layers of Fear style non-euclidean loop)
+            let finalTargetRoom = door.targetRoom;
+            if (state.sanity < 40 && Math.random() < 0.25 && state.chapter >= 3) {
+               // Trap them in a random room or the same room
+               const options = ['void_room', G.World3D.currentRoomId, 'hallway'];
+               finalTargetRoom = options[Math.floor(Math.random() * options.length)];
+            }
+
+            if(ch && ch.availableRooms.includes(finalTargetRoom)) {
+              transitionTo(finalTargetRoom, door.targetX, door.targetZ);
             } else if(!DLG.active) {
               DLG.show('A porta nao abre. Algo a impede.', {isThought:true});
             }
           }
           // Object interaction
-          const target = G.World3D.getInteractTarget();
-          if (target && !door) {
+          if (currentTarget && !door) {
             keys['KeyE']=keys['Enter']=false;
-            const ik = target + '_' + G.World3D.currentRoomId;
+            stareTimer = 0; // Reset stare on interact
+            const ik = currentTarget + '_' + G.World3D.currentRoomId;
             interactCounts[ik] = (interactCounts[ik]||0)+1;
             const count = interactCounts[ik];
-            let dk = INTERACT_MAP[target];
-            if(target==='mirror'&&count>1) dk=count>2?'mirror_interact_3':'mirror_interact_2';
-            if(target==='photo'&&count>1) dk='photo_interact_2';
-            if(target==='pills'&&count>1) dk='pills_interact_2';
-            if(target==='note'&&G.World3D.currentRoomId==='laboratory') {
+            let dk = INTERACT_MAP[currentTarget];
+            if(currentTarget==='mirror'&&count>1) dk=count>2?'mirror_interact_3':'mirror_interact_2';
+            if(currentTarget==='photo'&&count>1) dk='photo_interact_2';
+            if(currentTarget==='pills'&&count>1) dk='pills_interact_2';
+            if(currentTarget==='note'&&G.World3D.currentRoomId==='laboratory') {
               dk=count>1?'lab_note_2':'lab_note_1';
               state.flags.foundLabNote=true;
             }
             if(dk&&G.Story.dialogues[dk]) {
               DLG.showSeq(JSON.parse(JSON.stringify(G.Story.dialogues[dk])));
-              if(target==='mirror'&&count>=2) state.sanity-=8;
-              if(target==='tv') state.sanity-=3;
+              if(currentTarget==='mirror'&&count>=2) state.sanity-=8;
+              if(currentTarget==='tv') state.sanity-=3;
             }
           }
         }

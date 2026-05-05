@@ -493,7 +493,8 @@
       if (keys['KeyA'] || keys['ArrowLeft']) mx = -1;
       if (keys['KeyD'] || keys['ArrowRight']) mx = 1;
 
-      const speed = this.moveSpeed * dt;
+      const isMoving = (mx !== 0 || mz !== 0);
+      const speed = this.moveSpeed * dt * (sanity < 30 ? 0.8 : 1.0); // slower when insane
       const sinY = Math.sin(this.yaw), cosY = Math.cos(this.yaw);
       let dx = (mx * cosY + mz * sinY) * speed;
       let dz = (-mx * sinY + mz * cosY) * speed;
@@ -508,15 +509,61 @@
         if (nz > margin && nz < def.depth - margin) this.camera.position.z = nz;
       }
 
+      // Advanced Head Bob & Camera Sway
+      const now = Date.now();
+      let roll = 0;
+      
+      if (isMoving) {
+        // Footstep timing
+        this.walkTimer = (this.walkTimer || 0) + dt * 5;
+        const bob = Math.sin(this.walkTimer) * 0.05;
+        this.camera.position.y = this.playerHeight + bob;
+        roll = Math.sin(this.walkTimer * 0.5) * 0.015; // Sway side to side
+        
+        // Play footstep sound at bottom of bob
+        if (bob < -0.04 && !this.stepped) {
+          try { if(window.G && G.Audio) G.Audio.sfx.step(); } catch(e){}
+          this.stepped = true;
+        } else if (bob > 0) {
+          this.stepped = false;
+        }
+      } else {
+        // Breathing idle sway
+        this.camera.position.y = this.playerHeight + Math.sin(now * 0.001) * 0.01;
+      }
+
       // Camera rotation
-      const euler = new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ');
+      const euler = new THREE.Euler(this.pitch, this.yaw, roll, 'YXZ');
       this.camera.quaternion.setFromEuler(euler);
 
-      // Head bob
-      if (mx !== 0 || mz !== 0) {
-        const bob = Math.sin(Date.now() * 0.008) * 0.03;
-        this.camera.position.y = this.playerHeight + bob;
+      // Look Behind mechanic (sudden 180 turn)
+      this.yawHistory = this.yawHistory || [];
+      this.yawHistory.push({ time: now, yaw: this.yaw });
+      if (this.yawHistory.length > 30) this.yawHistory.shift();
+      
+      const oldYaw = this.yawHistory[0].yaw;
+      const yawDiff = Math.abs(this.yaw - oldYaw);
+      if (yawDiff > Math.PI * 0.7 && !this.turnTriggered && sanity < 50) {
+         this.turnTriggered = true;
+         // Trigger flash
+         const flash = document.createElement('div');
+         flash.style.position = 'absolute';
+         flash.style.top = 0; flash.style.left = 0; flash.style.width = '100vw'; flash.style.height = '100vh';
+         flash.style.backgroundColor = 'rgba(150, 0, 0, 0.4)';
+         flash.style.pointerEvents = 'none';
+         flash.style.zIndex = 9999;
+         flash.style.transition = 'opacity 0.5s';
+         document.body.appendChild(flash);
+         setTimeout(() => { flash.style.opacity = 0; }, 50);
+         setTimeout(() => { flash.remove(); this.turnTriggered = false; }, 2000);
+         try { if(window.G && G.Audio) G.Audio.sfx.step(); } catch(e){}
       }
+
+      // FOV breathing based on sanity
+      const baseFov = 65;
+      const panicFov = sanity < 40 ? Math.sin(now * 0.003) * 5 * ((40-sanity)/40) : 0;
+      this.camera.fov = baseFov + panicFov;
+      this.camera.updateProjectionMatrix();
 
       // Light flicker
       if (this.flickerLight) {

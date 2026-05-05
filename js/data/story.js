@@ -268,6 +268,25 @@
         { text: 'Mas tem cheiro de cafe fresco no ar. De onde?', isThought: true },
       ],
 
+      bathtub_interact: [
+        { text: 'A banheira esta cheia de agua escura. Gelada.', isThought: true },
+        { text: 'Eu nao enchi isso. Eu acho.', isThought: true },
+        { text: 'Tem algo no fundo. Parece... cabelos? Nao. Fios. Eletricos.', isThought: true },
+        { text: 'A agua reflete algo que nao esta aqui.', isThought: true },
+      ],
+
+      sink_interact: [
+        { text: 'A pia esta molhada. Alguem a usou recentemente.', isThought: true },
+        { text: 'O espelho acima esta embaçado, como se alguem tivesse respirado nele.', isThought: true },
+        { text: 'Mas eu sou o unico aqui. Eu acho.', isThought: true },
+      ],
+
+      toilet_interact: [
+        { text: 'O vaso sanitario. Normal. Ordinario.', isThought: true },
+        { text: 'A unica coisa normal neste apartamento.', isThought: true },
+        { text: '...E isso me assusta mais do que deveria.', isThought: true },
+      ],
+
       kitchen_table_interact: [
         { text: 'Marcas de copos na mesa. Dezenas deles. Sobrepostos.', isThought: true },
         { text: 'Como se eu tivesse sentado aqui milhares de vezes.', isThought: true },

@@ -81,7 +81,7 @@
         { type: 'bookshelf', x: 7.5, z: 3, w: 0.6, h: 2.2, d: 1.5 },
         { type: 'table', x: 4, z: 4, w: 1.2, h: 0.5, d: 0.8 },
         { type: 'window', x: 0.05, z: 3, w: 0.05, h: 1, d: 1.5, onWall: true },
-        { type: 'photo', x: 2, z: 0.05, w: 0.6, h: 0.5, d: 0.05, onWall: true },
+        { type: 'chalkboard', x: 2, z: 6.9, w: 2, h: 1.5, d: 0.1, onWall: true },
       ],
       light: { x: 4, y: 2.8, z: 3, intensity: 1.2, color: 0xaa8050 },
       ambient: 0.12,
@@ -414,6 +414,28 @@
           for(let bx=-1; bx<=1; bx+=2) for(let bz=-1; bz<=1; bz+=2) {
             group.add(createPart(0.15, 0.02, 0.15, 0x333, bx*0.2, f.h + 0.01, bz*0.2, 'cylinder'));
           }
+        } else if (f.type === 'chalkboard') {
+          // Frame
+          group.add(createPart(f.w + 0.1, f.h + 0.1, 0.05, 0x3a2a1a, 0, f.h/2, 0));
+          // Board
+          const boardCanvas = document.createElement('canvas');
+          boardCanvas.width = 512; boardCanvas.height = 256;
+          const bctx = boardCanvas.getContext('2d');
+          bctx.fillStyle = '#1a3a2a'; bctx.fillRect(0,0,512,256);
+          bctx.fillStyle = 'rgba(255,255,255,0.7)';
+          bctx.font = '16px "Courier New"';
+          bctx.fillText("Psi(x,t) = e^(-iEt/hbar) * psi(x)", 20, 50);
+          bctx.fillText("H_hat |Psi> = E |Psi>", 20, 90);
+          bctx.fillText("MULTIVERSE STABILIZATION FAILED", 20, 140);
+          bctx.fillText("Observer Effect -> Macro Collapse", 20, 180);
+          bctx.strokeStyle = 'rgba(255,50,50,0.6)'; bctx.lineWidth=4;
+          bctx.beginPath(); bctx.arc(350, 120, 80, 0, Math.PI*2); bctx.stroke();
+          
+          const tex = new THREE.CanvasTexture(boardCanvas);
+          const mat = new THREE.MeshBasicMaterial({ map: tex });
+          const board = new THREE.Mesh(new THREE.PlaneGeometry(f.w, f.h), mat);
+          board.position.set(0, f.h/2, 0.03);
+          group.add(board);
         } else {
           // Default fallback
           group.add(createPart(f.w, f.h, f.d, color, 0, f.h/2, 0)); 
@@ -431,6 +453,8 @@
         if (f.onWall) py = 1.5 - f.h/2;
         if (f.onTop) py = 0.9;
         group.position.set(f.x, py, f.z);
+        
+        group.userData = { isFurniture: true, baseY: py };
         
         // Rotation logic to orient furniture correctly
         // Walls: N(0,0->8,0), E(8,0->8,6), W(0,0->0,6), S(0,6->8,6)
@@ -627,6 +651,38 @@
               geo.dispose(); mat.dispose(); tex.dispose();
               this.hallucinationActive = false;
           }, 3000);
+      }
+
+      // Anti-Gravity (Zero-G) Anomaly
+      if (sanity < 20) {
+        this.roomGroup.children.forEach((child, i) => {
+          if (child.userData && child.userData.isFurniture && !child.userData.isFloating) {
+            if (Math.random() < 0.01) {
+               child.userData.isFloating = true;
+               child.userData.floatSpeed = 0.1 + Math.random() * 0.2;
+               child.userData.spinSpeedX = (Math.random() - 0.5) * 0.5;
+               child.userData.spinSpeedZ = (Math.random() - 0.5) * 0.5;
+            }
+          }
+          if (child.userData && child.userData.isFloating) {
+            child.position.y += child.userData.floatSpeed * dt;
+            child.rotation.x += child.userData.spinSpeedX * dt;
+            child.rotation.z += child.userData.spinSpeedZ * dt;
+          }
+        });
+      } else {
+        // Reset gravity
+        this.roomGroup.children.forEach((child) => {
+          if (child.userData && child.userData.isFurniture) {
+            child.userData.isFloating = false;
+            // Smoothly drop back down
+            if (child.position.y > child.userData.baseY) {
+              child.position.y = Math.max(child.userData.baseY, child.position.y - 2 * dt);
+              child.rotation.x *= 0.9;
+              child.rotation.z *= 0.9;
+            }
+          }
+        });
       }
     },
 

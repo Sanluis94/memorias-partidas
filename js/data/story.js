@@ -281,6 +281,14 @@
         { text: 'Meu coracao acelera. Eu escrevi isso. Quando? Por que?', isThought: true },
       ],
 
+      chalkboard_interact: [
+        { text: 'Uma lousa coberta de equacoes. "Mecanica Quantica Avancada".', isThought: true },
+        { text: 'A funcao de onda de Schrodinger. A caligrafia... e a MINHA.', isThought: true },
+        { text: '"FALHA NA ESTABILIZACAO DO MULTIVERSO". O que e isso?', isThought: true },
+        { text: 'O diagrama mostra um Colapso Macro-quantico provocado por um "Observador".', isThought: true },
+        { text: 'Isso nao e assombracao. Eu sou um fisico. E eu fiz algo TERREVEL.', isThought: true },
+      ],
+
       hallway_photo_interact: [
         { text: 'Outra foto no corredor. Mas essa... nao e uma foto normal.', isThought: true },
         { text: 'Mostra um laboratorio. Equipamentos enormes. Luzes brancas.', isThought: true },

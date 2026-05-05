@@ -85,6 +85,7 @@
     fridge:'fridge_interact', stove:'stove_interact', note:'note1_interact',
     table:'kitchen_table_interact', labConsole:'lab_equipment_interact',
     labEquip:'lab_equipment_interact', desk:'nightstand_interact',
+    chalkboard:'chalkboard_interact',
   };
   const interactCounts = {};
 

@@ -181,7 +181,7 @@
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      this.renderer.toneMappingExposure = 1.8;
+      this.renderer.toneMappingExposure = 2.2;
       document.getElementById('three-container').appendChild(this.renderer.domElement);
 
       // Mouse look
@@ -495,8 +495,13 @@
       }
 
       // Ambient
-      const ambient = new THREE.AmbientLight(0x0a0810, def.ambient || 0.03);
+      const ambient = new THREE.AmbientLight(0x1a1828, (def.ambient || 0.03) + 0.08);
       this.scene.add(ambient);
+
+      // Add subtle hemisphere light for better depth perception
+      const hemi = new THREE.HemisphereLight(0x1a1830, 0x080510, 0.15);
+      this.scene.add(hemi);
+      this.lights.push(hemi);
       this.lights.push(ambient);
 
       // Fog density per room
@@ -507,6 +512,38 @@
       this.camera.position.set(x, this.playerHeight, z);
       this.yaw = 0;
       this.pitch = 0;
+    },
+
+    // Build collision boxes from room furniture definitions
+    _getFurnitureColliders(def) {
+      if (!def || !def.furniture) return [];
+      const colliders = [];
+      for (const f of def.furniture) {
+        // Skip wall-mounted and on-top items (they don't block walking)
+        if (f.onWall || f.onTop) continue;
+        // Skip very small items
+        if (f.w < 0.2 && f.d < 0.2) continue;
+        colliders.push({
+          x: f.x, z: f.z,
+          hw: f.w / 2 + 0.15, // half-width + small padding
+          hd: f.d / 2 + 0.15, // half-depth + small padding
+          type: f.type,
+        });
+      }
+      return colliders;
+    },
+
+    // Check if player position collides with any furniture
+    _checkFurnitureCollision(px, pz, def) {
+      const colliders = this._getFurnitureColliders(def);
+      const pr = 0.25; // player radius
+      for (const c of colliders) {
+        if (px + pr > c.x - c.hw && px - pr < c.x + c.hw &&
+            pz + pr > c.z - c.hd && pz - pr < c.z + c.hd) {
+          return true;
+        }
+      }
+      return false;
     },
 
     update(dt, keys, sanity) {
@@ -523,14 +560,22 @@
       let dx = (mx * cosY + mz * sinY) * speed;
       let dz = (-mx * sinY + mz * cosY) * speed;
 
-      // Simple collision
+      // Wall + Furniture collision (AABB)
       const def = ROOM_DEFS[this.currentRoomId];
       if (def) {
-        const nx = this.camera.position.x + dx;
-        const nz = this.camera.position.z + dz;
+        const curX = this.camera.position.x;
+        const curZ = this.camera.position.z;
+        const nx = curX + dx;
+        const nz = curZ + dz;
         const margin = 0.3;
-        if (nx > margin && nx < def.width - margin) this.camera.position.x = nx;
-        if (nz > margin && nz < def.depth - margin) this.camera.position.z = nz;
+
+        // Try X movement
+        const canMoveX = nx > margin && nx < def.width - margin && !this._checkFurnitureCollision(nx, curZ, def);
+        // Try Z movement
+        const canMoveZ = nz > margin && nz < def.depth - margin && !this._checkFurnitureCollision(curX, nz, def);
+
+        if (canMoveX) this.camera.position.x = nx;
+        if (canMoveZ) this.camera.position.z = nz;
       }
 
       // Advanced Head Bob & Camera Sway
@@ -706,12 +751,26 @@
     // Raycast to find interactive object
     getInteractTarget() {
       const ray = new THREE.Raycaster();
-      ray.far = 3;
+      ray.far = 3.5;
       ray.setFromCamera(new THREE.Vector2(0, 0), this.camera);
-      const hits = ray.intersectObjects(this.roomGroup.children);
+      const hits = ray.intersectObjects(this.roomGroup.children, true);
       for (const h of hits) {
+        // Check the hit object itself
         if (h.object.userData && h.object.userData.interactive) {
           return h.object.userData.type;
+        }
+        // Check parent group (furniture groups contain hitbox children)
+        let parent = h.object.parent;
+        while (parent && parent !== this.roomGroup) {
+          if (parent.userData && parent.userData.isFurniture) {
+            // Find the hitbox child with interactive data
+            for (const child of parent.children) {
+              if (child.userData && child.userData.interactive) {
+                return child.userData.type;
+              }
+            }
+          }
+          parent = parent.parent;
         }
       }
       return null;

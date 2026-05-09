@@ -223,13 +223,18 @@
         DLG.onComplete=()=>setTimeout(()=>DLG.showSeq(G.Story.dialogues.final_choice),2000);
       },3000);
     }
-    // Memory fragments ch3
-    if(state.chapter>=3 && !DLG.active && Math.random()<0.0005){
-      const fr=['memory_wife_death_1','memory_daughter'][Math.floor(Math.random()*2)];
-      if(G.Story.dialogues[fr]) {
-        DLG.showSeq(G.Story.dialogues[fr]);
-        f.visitedMemory=(f.visitedMemory||0)+1;
-        state.sanity-=8;
+    // Memory fragments ch3 - increased frequency + guaranteed timer fallback
+    if(state.chapter>=3 && !DLG.active){
+      state._memoryTimer = (state._memoryTimer||0) + 0.016;
+      const shouldTrigger = Math.random()<0.005 || (state._memoryTimer > 30 && (f.visitedMemory||0) < 2);
+      if(shouldTrigger && (f.visitedMemory||0) < 4){
+        state._memoryTimer = 0;
+        const fr=['memory_wife_death_1','memory_daughter'][Math.floor(Math.random()*2)];
+        if(G.Story.dialogues[fr]) {
+          DLG.showSeq(G.Story.dialogues[fr]);
+          f.visitedMemory=(f.visitedMemory||0)+1;
+          state.sanity-=8;
+        }
       }
     }
     // Shadow entity activation (chapter 3+)
@@ -501,9 +506,13 @@
             if(currentTarget==='nightstand' && count===1) addItem('bathroom_key');
             if(currentTarget==='photo' && count===1) addItem('photo_family');
             if(currentTarget==='pills' && count===1) addItem('pill_bottle');
-            if(currentTarget==='bookshelf' && count===2 && !hasItem('diary_page_1')) addItem('diary_page_1');
+            if(currentTarget==='bookshelf' && count>=2 && !hasItem('diary_page_1')) addItem('diary_page_1');
             if(currentTarget==='couch' && count>=2 && state.chapter>=2 && !hasItem('diary_page_2')) addItem('diary_page_2');
             if(currentTarget==='desk' && count>=1 && state.chapter>=4 && !hasItem('lab_keycard')) addItem('lab_keycard');
+            
+            // Register special objective keys
+            if(currentTarget==='chalkboard') interactCounts['chalkboard_living_room'] = (interactCounts['chalkboard_living_room']||0)+1;
+            if(currentTarget==='note' && G.World3D.currentRoomId==='kitchen') interactCounts['note_kitchen'] = (interactCounts['note_kitchen']||0)+1;
             
             if(currentTarget==='mirror'&&count>1) dk=count>2?'mirror_interact_3':'mirror_interact_2';
             if(currentTarget==='photo'&&count>1) dk='photo_interact_2';
@@ -512,6 +521,24 @@
               dk=count>1?'lab_note_2':'lab_note_1';
               state.flags.foundLabNote=true;
               if(!hasItem('diary_page_3')) addItem('diary_page_3');
+            }
+            // Handle furniture with no explicit INTERACT_MAP entry
+            if(!dk) {
+              const fallbackDialogues = {
+                'sink': [{text:'A torneira pinga. Cada gota ecoa no silencio.', isThought:true}],
+                'toilet': [{text:'O vaso. A porcelana esta amarelada pelo tempo.', isThought:true}],
+                'bathtub': [{text:'A banheira tem uma mancha. Ferrugem? Ou sera...', isThought:true}],
+                'wardrobe': [{text:'O armario esta trancado. Algo la dentro range.', isThought:true}],
+                'counter': [{text:'A bancada da cozinha. Marcas de uso antigo.', isThought:true}],
+                'fridge': [{text:'A geladeira zumbe. As datas dos alimentos nao fazem sentido.', isThought:true}],
+                'stove': [{text:'O fogao esta frio. Poeira cobre as bocas.', isThought:true}],
+                'table': [{text:'Marcas de copos na mesa. Dezenas deles. Sobrepostos.', isThought:true}],
+                'labEquip': [{text:'Equipamento de laboratorio. Monitores com funcoes de onda.', isThought:true}],
+                'labConsole': [{text:'Console de controle. Os dados sao meus. Meu codigo.', isThought:true}],
+              };
+              if(fallbackDialogues[currentTarget]) {
+                DLG.showSeq(JSON.parse(JSON.stringify(fallbackDialogues[currentTarget])));
+              }
             }
             if(dk&&G.Story.dialogues[dk]) {
               DLG.showSeq(JSON.parse(JSON.stringify(G.Story.dialogues[dk])));

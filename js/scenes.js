@@ -401,14 +401,19 @@
         }, 3000);
       }
 
-      // Memory fragments in ch3
-      if (this.chapter === 3 && !G.Dialogue.active && Math.random() < 0.0004) {
-        const frags = ['memory_wife_death_1', 'memory_daughter'];
-        const frag = frags[Math.floor(Math.random() * frags.length)];
-        G.Dialogue.showSequence(G.Story.dialogues[frag]);
-        f.visitedMemory = (f.visitedMemory || 0) + 1;
-        G.Sanity.change(-10, 'memory');
-        G.Effects.triggerShake(0.6, 5);
+      // Memory fragments in ch3 - increased frequency + timer fallback
+      if (this.chapter === 3 && !G.Dialogue.active) {
+        this._memTimer = (this._memTimer || 0) + dt;
+        const shouldTrigger = Math.random() < 0.003 || (this._memTimer > 25 && (f.visitedMemory||0) < 1);
+        if (shouldTrigger && (f.visitedMemory||0) < 4) {
+          this._memTimer = 0;
+          const frags = ['memory_wife_death_1', 'memory_daughter'];
+          const frag = frags[Math.floor(Math.random() * frags.length)];
+          G.Dialogue.showSequence(G.Story.dialogues[frag]);
+          f.visitedMemory = (f.visitedMemory || 0) + 1;
+          G.Sanity.change(-10, 'memory');
+          G.Effects.triggerShake(0.6, 5);
+        }
       }
     },
 
